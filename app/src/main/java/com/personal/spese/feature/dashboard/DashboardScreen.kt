@@ -91,21 +91,20 @@ private fun SummaryGrid(state: DashboardUiState) {
                 modifier = Modifier.weight(1f)
             )
             SummaryCard(
-                title = "N° spese",
-                value = state.expenseCount.toString(),
+                title = "N° movimenti",
+                value = state.movementCount.toString(),
                 modifier = Modifier.weight(1f)
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            // Placeholder fino a M7 (rate).
             SummaryCard(
                 title = "Rate aperte",
-                value = if (state.hasInstallmentData) state.openInstallments.toString() else "—",
+                value = state.openInstallments.toString(),
                 modifier = Modifier.weight(1f)
             )
             SummaryCard(
                 title = "Residuo rate",
-                value = if (state.hasInstallmentData) Money.format(state.installmentsResidualCents) else "—",
+                value = Money.format(state.installmentsResidualCents),
                 modifier = Modifier.weight(1f)
             )
         }

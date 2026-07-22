@@ -12,6 +12,8 @@ object Routes {
     fun addEdit(type: String = "SINGLE", id: Long? = null): String =
         "addEdit?type=$type&id=${id ?: -1L}"
 
+    const val ADD_PLAN = "addPlan"
+
     const val INSTALLMENT_DETAIL = "installmentDetail/{planId}"
     fun installmentDetail(planId: Long): String = "installmentDetail/$planId"
 

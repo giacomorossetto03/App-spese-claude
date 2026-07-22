@@ -31,6 +31,8 @@ import com.personal.spese.feature.dashboard.DashboardScreen
 import com.personal.spese.feature.expenses.ExpensesScreen
 import com.personal.spese.feature.expenses.addedit.AddEditExpenseScreen
 import com.personal.spese.feature.installments.InstallmentsScreen
+import com.personal.spese.feature.installments.addplan.AddInstallmentPlanScreen
+import com.personal.spese.feature.installments.detail.InstallmentDetailScreen
 import com.personal.spese.feature.settings.SettingsScreen
 
 private data class NavItem(val route: String, val label: String, val icon: ImageVector)
@@ -65,7 +67,22 @@ fun AppRoot() {
             composable(Routes.EXPENSES) {
                 ExpensesScreen(onEdit = { id -> navController.navigate(Routes.addEdit(id = id)) })
             }
-            composable(Routes.INSTALLMENTS) { InstallmentsScreen() }
+            composable(Routes.INSTALLMENTS) {
+                InstallmentsScreen(
+                    onAddPlan = { navController.navigate(Routes.ADD_PLAN) },
+                    onOpenPlan = { id -> navController.navigate(Routes.installmentDetail(id)) }
+                )
+            }
+            composable(Routes.ADD_PLAN) {
+                AddInstallmentPlanScreen(onDone = { navController.popBackStack() })
+            }
+            composable(
+                route = Routes.INSTALLMENT_DETAIL,
+                arguments = listOf(navArgument("planId") { type = NavType.LongType })
+            ) { entry ->
+                val planId = entry.arguments?.getLong("planId") ?: -1L
+                InstallmentDetailScreen(planId = planId, onBack = { navController.popBackStack() })
+            }
             composable(Routes.SETTINGS) {
                 SettingsScreen(onOpenCategories = { navController.navigate(Routes.CATEGORIES) })
             }

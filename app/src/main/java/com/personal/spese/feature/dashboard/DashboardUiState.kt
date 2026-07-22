@@ -24,10 +24,9 @@ data class RecentExpenseRow(
 
 data class DashboardUiState(
     val yearMonth: YearMonth = YearMonth.now(),
+    // Include spese + rate dovute nel mese (invarianti 4-6).
     val totalCents: Long = 0L,
-    val expenseCount: Int = 0,
-    // Popolate in M7 (rate): in M6 restano placeholder.
-    val hasInstallmentData: Boolean = false,
+    val movementCount: Int = 0,
     val openInstallments: Int = 0,
     val installmentsResidualCents: Long = 0L,
     val categories: List<CategoryShare> = emptyList(),

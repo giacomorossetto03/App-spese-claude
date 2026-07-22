@@ -6,6 +6,7 @@ import com.personal.spese.core.db.AppDatabase
 import com.personal.spese.data.repository.CategoryRepository
 import com.personal.spese.data.repository.DashboardRepository
 import com.personal.spese.data.repository.ExpenseRepository
+import com.personal.spese.data.repository.InstallmentRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,7 +29,9 @@ class AppContainer(context: Context) {
 
     val expenseRepository = ExpenseRepository(database.expenseDao())
 
-    val dashboardRepository = DashboardRepository(database.expenseDao())
+    val installmentRepository = InstallmentRepository(database)
+
+    val dashboardRepository = DashboardRepository(database.expenseDao(), database.installmentEntryDao())
 
     init {
         appScope.launch { categoryRepository.seedDefaultsIfEmpty() }

@@ -27,8 +27,9 @@ class DashboardViewModel(
             dashboard.countInMonth(ym),
             dashboard.categoryBreakdown(ym),
             dashboard.recentExpenses(5),
-            categories.observeAll()
-        ) { total, count, breakdown, recent, cats ->
+            // Combine annidato: mantiene l'arità del combine esterno a 5.
+            combine(categories.observeAll(), dashboard.installmentSummary()) { cats, summary -> cats to summary }
+        ) { total, count, breakdown, recent, (cats, summary) ->
             val nameById = cats.associate { it.id to it.name }
             val shares = breakdown
                 .sortedByDescending { it.total }
@@ -43,7 +44,9 @@ class DashboardViewModel(
             DashboardUiState(
                 yearMonth = ym,
                 totalCents = total,
-                expenseCount = count,
+                movementCount = count,
+                openInstallments = summary.openCount,
+                installmentsResidualCents = summary.residualCents,
                 categories = shares,
                 recent = recent.map { e ->
                     RecentExpenseRow(
