@@ -9,7 +9,7 @@ proseguire le milestone verso l'MVP potendo ora **compilare e testare in locale*
 possibile nel sandbox chat dove il progetto è nato).
 
 ## Current Progress
-Milestone **1–7 complete** e presenti nel repo:
+Milestone **1–8 complete** e presenti nel repo:
 - **M1 Setup** — Gradle (version catalog), tema Material 3 chiaro/scuro, bottom nav 4 voci + FAB, scaffold navigazione.
 - **M2 Model + Room** — 6 entità, 5 DAO con query aggregate mese/rate/ricorrenti già scritte.
 - **M3 Categorie** — CRUD, seed 10 categorie default al primo avvio, archiviazione; selettore tema persistito su DataStore.
@@ -23,6 +23,11 @@ Milestone **1–7 complete** e presenti nel repo:
   con avanzamento, creazione piano (anteprima rata), dettaglio con segna-pagata ed elimina (CASCADE). Dashboard
   unita: `totale = sum(expense) + sumDue(installment)`, ripartizione fusa, card "Rate aperte"/"Residuo rate"
   reali, card conteggio rinominata "N° movimenti" (spese + rate dovute) per coerenza col totale.
+- **M8 Ricorrenti** — `RecurringRepository` (CRUD + `getById`) e `RecurringGenerator` **idempotente** che
+  materializza le istanze mancanti fino al mese corrente come `Expense(RECURRING_INSTANCE)` (via
+  `ExpenseDao.findRecurringInstance`, avanzando `lastGeneratedPeriod` YYYYMM; rispetta start/end e `dayOfMonth`
+  1..28). Eseguito all'avvio (`AppContainer`) e dopo create/edit/riattivazione. UI `feature/recurring` (elenco +
+  form) da Impostazioni → "Spese ricorrenti". Nessun nuovo calcolo in dashboard/lista: le istanze SONO `Expense`.
 
 Incluso: **Gradle wrapper** completo (`gradlew` + `gradle-wrapper.jar`) e **CI** `.github/workflows/build-apk.yml`
 che compila l'APK, lo carica come artifact **e** lo pubblica come **Release** (tag mobile `debug-latest`,
@@ -48,19 +53,17 @@ link diretto al file `.apk`). ~50 file Kotlin.
   Gradle / Maven Central bloccati (403). Da lì non si compila → per questo si è passati a Claude Code in locale.
 - `gradle-wrapper.jar` è binario ed è **già incluso**: non rigenerarlo salvo necessità.
 
-## Next Steps — Milestone 8: Ricorrenti
-Le ricorrenti vanno **materializzate** come `Expense(type=RECURRING_INSTANCE)` così il totale resta
-`sum(expense) + sumDue(installment)` senza doppi conteggi (invariante 5).
-1. `RecurringRepository` sul `RecurringExpenseDao` (query `toGenerate`, `lastGeneratedPeriod` YYYYMM già pronte):
-   CRUD delle regole ricorrenti (importo, categoria, `dayOfMonth` 1..28, nota/metodo).
-2. `RecurringGenerator`: alla data odierna (o all'avvio) genera le istanze mancanti fino al mese corrente,
-   creando `Expense(type=RECURRING_INSTANCE, recurringId=…)` con `ExpenseDao.findRecurringInstance` per evitare
-   duplicati; aggiornare `lastGeneratedPeriod`. Idempotente. Data istanza = `dayOfMonth` del periodo.
-3. UI `feature/recurring` (nuova) o sezione in Impostazioni: elenco/gestione regole. Le istanze appaiono già in
-   lista spese e dashboard (sono `Expense`), con etichetta "ricorrente" già gestita in `ExpensesScreen`.
+## Next Steps — Milestone 9: Widget (Glance)
+Dipendenze Glance già nel catalog/`build.gradle` (`glance-appwidget`, `glance-material3`).
+1. `GlanceAppWidget` + `GlanceAppWidgetReceiver` (package `feature/widget` o `widget/`); dichiarare il receiver e
+   l'`appwidget-provider` XML nel `AndroidManifest`.
+2. Contenuto minimale: totale del mese corrente + n° movimenti (riuso `DashboardRepository`/DAO). Leggere i dati
+   in modo coerente (Glance usa `GlanceStateDefinition`/coroutine; niente Compose runtime dell'app).
+3. Tap sul widget → apre l'app (deep link `spese://add` già presente, o la dashboard).
+4. Aggiornamento: `updateAll` dopo modifiche rilevanti (o refresh periodico). Tenere il widget semplice.
 
-**Attenzione:** niente nuovi calcoli nel totale (le istanze SONO `Expense`); il generatore dev'essere idempotente.
-Dopo M8 → M9 Widget (Glance), M10 Export/Import (kotlinx.serialization), M11 UX.
+**Attenzione:** Glance è un runtime separato (RemoteViews), non condivide i Composable dell'app. Poi M10
+Export/Import (kotlinx.serialization, già predisposto) e M11 rifinitura UX.
 
 ## Come ottenere l'APK
 - **Release (consigliato)**: GitHub → *Releases* → `debug-latest` → scarica `app-debug.apk`. Aggiornato a ogni push.
