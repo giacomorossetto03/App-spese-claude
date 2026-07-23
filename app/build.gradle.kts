@@ -22,6 +22,9 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            // Firmato con la debug key: APK release (non-debuggable, fluido) ma
+            // installabile direttamente senza un keystore dedicato.
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

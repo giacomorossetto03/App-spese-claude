@@ -28,26 +28,28 @@ jobs:
       - name: Grant execute permission to gradlew
         run: chmod +x ./gradlew
 
-      - name: Build debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+      # APK release (non-debuggable → fluido), firmato con la debug key = installabile.
+      - name: Build release APK
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Upload APK (artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: spese-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: spese-apk
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
-      # Pubblica l'APK come Release: link diretto e permanente al file .apk,
-      # senza dover estrarre lo zip dell'artifact. Il tag "debug-latest" viene
-      # aggiornato a ogni build, quindi punta sempre all'ultimo APK.
+      # Pubblica l'APK come Release: link diretto e permanente al file .apk.
+      # Il tag "latest" viene aggiornato a ogni build, quindi punta sempre all'ultimo APK.
       - name: Publish APK to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: debug-latest
-          name: Spese — APK debug (ultima build)
+          tag_name: latest
+          name: Spese — APK (ultima build)
           body: |
-            APK di debug installabile (minSdk 26, target 35 → compatibile con Android 14).
+            APK release ottimizzato (non-debuggable → fluido su dispositivi mid-range),
+            firmato con la debug key quindi installabile direttamente.
+            minSdk 26 / target 35 → compatibile con Android 14.
             Build automatica dal branch `${{ github.ref_name }}` — commit `${{ github.sha }}`.
-          files: app/build/outputs/apk/debug/app-debug.apk
+          files: app/build/outputs/apk/release/app-release.apk
           make_latest: true

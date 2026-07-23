@@ -117,7 +117,12 @@ fun AppRoot() {
                 deepLinks = listOf(navDeepLink { uriPattern = "spese://add" })
             ) { entry ->
                 val id = entry.arguments?.getLong("id") ?: -1L
-                AddEditExpenseScreen(expenseId = id, onDone = { navController.popBackStack() })
+                AddEditExpenseScreen(
+                    expenseId = id,
+                    onDone = { navController.popBackStack() },
+                    onAddRecurring = { navController.popBackStack(); navController.navigate(Routes.recurringEdit()) },
+                    onAddPlan = { navController.popBackStack(); navController.navigate(Routes.ADD_PLAN) }
+                )
             }
         }
     }

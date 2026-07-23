@@ -51,7 +51,12 @@ private val dateFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.ITALY)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddEditExpenseScreen(expenseId: Long, onDone: () -> Unit) {
+fun AddEditExpenseScreen(
+    expenseId: Long,
+    onDone: () -> Unit,
+    onAddRecurring: () -> Unit = {},
+    onAddPlan: () -> Unit = {}
+) {
     val container = appContainer()
     val vm: AddEditExpenseViewModel = viewModel(
         factory = viewModelFactory {
@@ -80,16 +85,23 @@ fun AddEditExpenseScreen(expenseId: Long, onDone: () -> Unit) {
                 .padding(horizontal = 20.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Selettore tipo: per la M4 solo "Singola" è attiva.
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-                val labels = listOf("Singola", "Ricorrente", "Rateizzata")
-                labels.forEachIndexed { i, label ->
-                    SegmentedButton(
-                        selected = i == 0,
-                        onClick = { },
-                        enabled = i == 0,
-                        shape = SegmentedButtonDefaults.itemShape(index = i, count = labels.size)
-                    ) { Text(label) }
+            // Selettore tipo (solo in inserimento): "Singola" è questo form; le altre
+            // sono scorciatoie ai flussi dedicati (Ricorrenti M8 / Rate M7).
+            if (!s.isEdit) {
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                    val labels = listOf("Singola", "Ricorrente", "Rateizzata")
+                    labels.forEachIndexed { i, label ->
+                        SegmentedButton(
+                            selected = i == 0,
+                            onClick = {
+                                when (i) {
+                                    1 -> onAddRecurring()
+                                    2 -> onAddPlan()
+                                }
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = i, count = labels.size)
+                        ) { Text(label) }
+                    }
                 }
             }
 
