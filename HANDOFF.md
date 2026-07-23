@@ -30,11 +30,19 @@ Milestone **1–8 complete** e presenti nel repo:
   form) da Impostazioni → "Spese ricorrenti". Nessun nuovo calcolo in dashboard/lista: le istanze SONO `Expense`.
 
 Incluso: **Gradle wrapper** completo (`gradlew` + `gradle-wrapper.jar`) e **CI** `.github/workflows/build-apk.yml`
-che compila l'APK, lo carica come artifact **e** lo pubblica come **Release** (tag mobile `debug-latest`,
-link diretto al file `.apk`). ~50 file Kotlin.
+che compila l'APK **release**, lo carica come artifact **e** lo pubblica come **Release** (tag mobile `latest`,
+link diretto al file `.apk`). ~60 file Kotlin.
+
+### Rifinitura (fix + performance)
+- **Fix pulsanti**: nel form spesa i segmentati "Ricorrente"/"Rateizzata" erano disabilitati (dead-end). Ora, in
+  inserimento, sono scorciatoie ai flussi dedicati (M8/M7); nascosti in modifica. Export/Import/Reset in
+  Impostazioni restano la M10 (disabilitati, etichettati).
+- **Anti-scatti**: la CI ora compila **`assembleRelease`** (non-debuggable → molto più fluido su mid-range),
+  firmato con la debug key (`signingConfig = signingConfigs.getByName("debug")`) → installabile direttamente.
+  `minify` off per sicurezza (R8 = ottimizzazione futura facoltativa). Asset: `app-release.apk`, tag `latest`.
 
 ### Build / APK — stato verificato
-- **Compila e passa su GitHub Actions** (runner con Android SDK preinstallato). APK debug: minSdk 26 / target 35
+- **Compila e passa su GitHub Actions** (runner con Android SDK preinstallato). APK release: minSdk 26 / target 35
   → installabile e **compatibile con Android 14**.
 - In ambienti con egress ristretto (es. Claude Code su web) `dl.google.com` è **bloccato da policy**: l'SDK non
   è scaricabile in locale → **usare la CI** (è il percorso di build supportato). Non aggirare il blocco.
@@ -66,6 +74,7 @@ Dipendenze Glance già nel catalog/`build.gradle` (`glance-appwidget`, `glance-m
 Export/Import (kotlinx.serialization, già predisposto) e M11 rifinitura UX.
 
 ## Come ottenere l'APK
-- **Release (consigliato)**: GitHub → *Releases* → `debug-latest` → scarica `app-debug.apk`. Aggiornato a ogni push.
-- **Artifact**: Actions → ultima run *Build APK* → *Artifacts* → `spese-debug-apk` (zip da estrarre).
-- Ogni push su `main`/`master`/`claude/**` ricompila e ripubblica automaticamente.
+- **Release (consigliato)**: GitHub → *Releases* → `latest` → scarica `app-release.apk` (release ottimizzata,
+  installabile). Aggiornato a ogni push di codice.
+- **Artifact**: Actions → ultima run *Build APK* → *Artifacts* → `spese-apk`.
+- I push di sola documentazione (`**.md`) non fanno partire la CI. Il vecchio tag `debug-latest` (APK debug) è superato.
