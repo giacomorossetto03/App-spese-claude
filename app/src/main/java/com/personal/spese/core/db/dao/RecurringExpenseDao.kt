@@ -15,6 +15,9 @@ interface RecurringExpenseDao {
     @Query("SELECT * FROM recurring_expense WHERE isActive = 1")
     fun observeActive(): Flow<List<RecurringExpenseEntity>>
 
+    @Query("SELECT * FROM recurring_expense WHERE id = :id")
+    suspend fun getById(id: Long): RecurringExpenseEntity?
+
     @Query(
         "SELECT * FROM recurring_expense " +
             "WHERE isActive = 1 AND (lastGeneratedPeriod IS NULL OR lastGeneratedPeriod < :currentPeriod)"

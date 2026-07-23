@@ -19,6 +19,9 @@ object Dates {
 
     fun period(ym: YearMonth): Int = ym.year * 100 + ym.monthValue
 
+    /** Inverso di [period]: da Int YYYYMM a YearMonth. */
+    fun fromPeriod(period: Int): YearMonth = YearMonth.of(period / 100, period % 100)
+
     fun today(): LocalDate = LocalDate.now()
 
     fun currentYearMonth(): YearMonth = YearMonth.now()

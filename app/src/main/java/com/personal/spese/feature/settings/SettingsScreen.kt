@@ -27,7 +27,7 @@ import com.personal.spese.di.appContainer
 import com.personal.spese.di.viewModelFactory
 
 @Composable
-fun SettingsScreen(onOpenCategories: () -> Unit) {
+fun SettingsScreen(onOpenCategories: () -> Unit, onOpenRecurring: () -> Unit) {
     val container = appContainer()
     val vm: SettingsViewModel = viewModel(factory = viewModelFactory { SettingsViewModel(container.settings) })
     val theme by vm.themeMode.collectAsStateWithLifecycle()
@@ -52,6 +52,7 @@ fun SettingsScreen(onOpenCategories: () -> Unit) {
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
         SettingRow(label = "Gestione categorie", onClick = onOpenCategories)
+        SettingRow(label = "Spese ricorrenti", onClick = onOpenRecurring)
         SettingRow(label = "Export dati (JSON/CSV)", subtitle = "Milestone 10", enabled = false, onClick = {})
         SettingRow(label = "Import backup", subtitle = "Milestone 10", enabled = false, onClick = {})
         SettingRow(label = "Reset dati", subtitle = "Milestone 10", enabled = false, onClick = {})

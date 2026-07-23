@@ -7,6 +7,8 @@ import com.personal.spese.data.repository.CategoryRepository
 import com.personal.spese.data.repository.DashboardRepository
 import com.personal.spese.data.repository.ExpenseRepository
 import com.personal.spese.data.repository.InstallmentRepository
+import com.personal.spese.data.repository.RecurringGenerator
+import com.personal.spese.data.repository.RecurringRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -33,7 +35,15 @@ class AppContainer(context: Context) {
 
     val dashboardRepository = DashboardRepository(database.expenseDao(), database.installmentEntryDao())
 
+    val recurringRepository = RecurringRepository(database.recurringExpenseDao())
+
+    val recurringGenerator = RecurringGenerator(database.recurringExpenseDao(), database.expenseDao())
+
     init {
-        appScope.launch { categoryRepository.seedDefaultsIfEmpty() }
+        appScope.launch {
+            categoryRepository.seedDefaultsIfEmpty()
+            // Materializza le istanze ricorrenti mancanti fino al mese corrente (idempotente).
+            recurringGenerator.generateUpTo()
+        }
     }
 }

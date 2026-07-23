@@ -33,6 +33,8 @@ import com.personal.spese.feature.expenses.addedit.AddEditExpenseScreen
 import com.personal.spese.feature.installments.InstallmentsScreen
 import com.personal.spese.feature.installments.addplan.AddInstallmentPlanScreen
 import com.personal.spese.feature.installments.detail.InstallmentDetailScreen
+import com.personal.spese.feature.recurring.RecurringListScreen
+import com.personal.spese.feature.recurring.edit.RecurringEditScreen
 import com.personal.spese.feature.settings.SettingsScreen
 
 private data class NavItem(val route: String, val label: String, val icon: ImageVector)
@@ -84,7 +86,24 @@ fun AppRoot() {
                 InstallmentDetailScreen(planId = planId, onBack = { navController.popBackStack() })
             }
             composable(Routes.SETTINGS) {
-                SettingsScreen(onOpenCategories = { navController.navigate(Routes.CATEGORIES) })
+                SettingsScreen(
+                    onOpenCategories = { navController.navigate(Routes.CATEGORIES) },
+                    onOpenRecurring = { navController.navigate(Routes.RECURRING) }
+                )
+            }
+            composable(Routes.RECURRING) {
+                RecurringListScreen(
+                    onAdd = { navController.navigate(Routes.recurringEdit()) },
+                    onEdit = { id -> navController.navigate(Routes.recurringEdit(id)) },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = Routes.RECURRING_EDIT,
+                arguments = listOf(navArgument("id") { type = NavType.LongType; defaultValue = -1L })
+            ) { entry ->
+                val id = entry.arguments?.getLong("id") ?: -1L
+                RecurringEditScreen(recurringId = id, onDone = { navController.popBackStack() })
             }
             composable(Routes.CATEGORIES) {
                 CategoriesScreen(onBack = { navController.popBackStack() })
