@@ -73,4 +73,4 @@ In alternativa la CI `.github/workflows/build-apk.yml` produce l'APK come artifa
 ## Roadmap
 1 Setup ✅ · 2 Model+Room ✅ · 3 Categorie ✅ · 4 Inserimento spese ✅ · 5 Lista spese ✅ ·
 6 Dashboard (solo Expense) ✅ · 7 Rate (+unione dashboard) ✅ · 8 Ricorrenti ✅ · 9 Widget ✅ ·
-**10 Export/Import ⏭ PROSSIMA** · 11 Rifinitura UX.
+10 Export/Import ✅ · **11 Rifinitura UX (in corso)**.

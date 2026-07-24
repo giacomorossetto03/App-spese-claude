@@ -9,7 +9,7 @@ proseguire le milestone verso l'MVP potendo ora **compilare e testare in locale*
 possibile nel sandbox chat dove il progetto è nato).
 
 ## Current Progress
-Milestone **1–9 complete** e presenti nel repo:
+Milestone **1–10 complete** (11 rifinitura UX in corso) e presenti nel repo:
 - **M1 Setup** — Gradle (version catalog), tema Material 3 chiaro/scuro, bottom nav 4 voci + FAB, scaffold navigazione.
 - **M2 Model + Room** — 6 entità, 5 DAO con query aggregate mese/rate/ricorrenti già scritte.
 - **M3 Categorie** — CRUD, seed 10 categorie default al primo avvio, archiviazione; selettore tema persistito su DataStore.
@@ -79,18 +79,19 @@ link diretto al file `.apk`). ~60 file Kotlin.
   Gradle / Maven Central bloccati (403). Da lì non si compila → per questo si è passati a Claude Code in locale.
 - `gradle-wrapper.jar` è binario ed è **già incluso**: non rigenerarlo salvo necessità.
 
-## Next Steps — Milestone 10: Export/Import (kotlinx.serialization)
-`kotlinx-serialization-json` già in dipendenze; in Impostazioni ci sono già le voci disabilitate
-(Export / Import / Reset) da abilitare.
-1. **Export**: serializzare tutte le entità (categorie, spese, piani+rate, ricorrenti) in un JSON (e opz. CSV
-   delle spese). Salvataggio via Storage Access Framework (`ActivityResultContracts.CreateDocument`).
-2. **Import**: leggere il JSON (`OpenDocument`), validare, e ripristinare in transazione (attenzione a id/FK:
-   reinserire con id azzerati e rimappare le referenze, oppure svuotare e reimportare).
-3. **Reset dati**: conferma forte → `clearAllTables()` (o cancellazioni ordinate rispettando le FK RESTRICT).
-4. Collegare i 3 `SettingRow` oggi `enabled = false`.
+- **M10 Export/Import/Reset** — `core/backup` (`BackupData` + DTO `@Serializable`) e `data/backup`
+  (`BackupMapper`, `BackupManager`). Export → JSON via SAF (`CreateDocument`); Import → `OpenDocument`, ripristino
+  in transazione con ordine FK-safe (id preservati); Reset → svuota e riseminа le categorie default. DAO estesi
+  con `getAll`/`deleteAll`/`insertAll`. UI: sezione **Backup** in Impostazioni (Toast per esito).
+- **Fix grafico insets** — `AppRoot` usa `consumeWindowInsets(padding)` così le sotto-schermate con `TopAppBar`
+  non raddoppiano il padding della status bar.
 
-**Attenzione:** con `fallbackToDestructiveMigration` non cambiare lo schema senza motivo (perdita dati sul device
-dell'utente). Poi M11 rifinitura UX. Nota: R8/minify è **off** nel release — abilitabile come ottimizzazione.
+## Next Steps — Milestone 11: Rifinitura UX (facoltativa)
+MVP+ completo. Possibili rifiniture: filtro "Ricorrenti" nella lista spese; budget mensile (`MonthlyBudget` già in
+schema, post-MVP) con barra progresso in dashboard; export CSV oltre al JSON; empty-state più curati; icona app.
+Ottimizzazione ulteriore: abilitare **R8/minify** nel release (serialization è ora usata → aggiungere keep-rule
+per `@Serializable` prima di attivarlo). Ricordare: `fallbackToDestructiveMigration` → non toccare lo schema
+senza necessità (perdita dati sul device).
 
 ## Come ottenere l'APK
 - **Release (consigliato)**: GitHub → *Releases* → `latest` → scarica `app-release.apk` (release ottimizzata,
