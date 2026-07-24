@@ -39,6 +39,13 @@ Milestone **1–9 complete** e presenti nel repo:
 - **Restyling**: schema colori M3 con container; `ui/theme/CategoryColors` (colore per categoria dall'id, no DB);
   dashboard con card+icone, card totale in primaryContainer, barre categoria colorate; pallini colore nelle liste.
 - **Fix pulsanti**: segmentati Ricorrente/Rateizzata nel form spesa → scorciatoie ai flussi dedicati.
+- **Grafici** (Compose Canvas, nessuna libreria): dashboard = donut ripartizione categorie + "Andamento (ultimi
+  mesi)" a barre (6 mesi). Nuove query `ExpenseDao.sumByMonth` / `InstallmentEntryDao.sumDueByMonth`
+  (GROUP BY `strftime('%Y%m', date*86400,'unixepoch')`) + `PeriodSum`; `DashboardRepository.monthlyTrend`/`MonthTotal`.
+  Widget = barra a segmenti proporzionali per categoria (Bitmap via Glance `Image`).
+- **Fix bug ricorrenti**: modificando un'istanza `RECURRING_INSTANCE` dalla lista, il salvataggio la forzava a
+  `SINGLE` azzerando `recurringId` → duplicato alla generazione. Ora `AddEditExpenseViewModel` conserva tipo e
+  `recurringId` in modifica.
 
 Incluso: **Gradle wrapper** completo (`gradlew` + `gradle-wrapper.jar`) e **CI** `.github/workflows/build-apk.yml`
 che compila l'APK **release**, lo carica come artifact **e** lo pubblica come **Release** (tag mobile `latest`,
