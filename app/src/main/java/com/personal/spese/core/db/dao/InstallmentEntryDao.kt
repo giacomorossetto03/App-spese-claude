@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import com.personal.spese.core.db.entity.InstallmentEntryEntity
 import com.personal.spese.core.model.CategorySum
+import com.personal.spese.core.model.PeriodSum
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -30,6 +31,13 @@ interface InstallmentEntryDao {
 
     @Query("SELECT COUNT(*) FROM installment_entry WHERE dueDate >= :start AND dueDate < :end")
     fun countDueInMonth(start: Long, end: Long): Flow<Int>
+
+    @Query(
+        "SELECT CAST(strftime('%Y%m', dueDate * 86400, 'unixepoch') AS INTEGER) AS period, " +
+            "COALESCE(SUM(amountCents),0) AS total " +
+            "FROM installment_entry WHERE dueDate >= :start AND dueDate < :end GROUP BY period"
+    )
+    fun sumDueByMonth(start: Long, end: Long): Flow<List<PeriodSum>>
 
     @Query(
         "SELECT p.categoryId AS categoryId, COALESCE(SUM(e.amountCents),0) AS total " +

@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Upsert
 import com.personal.spese.core.db.entity.ExpenseEntity
 import com.personal.spese.core.model.CategorySum
+import com.personal.spese.core.model.PeriodSum
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -29,6 +30,13 @@ interface ExpenseDao {
 
     @Query("SELECT * FROM expense ORDER BY date DESC, id DESC LIMIT :limit")
     fun observeRecent(limit: Int): Flow<List<ExpenseEntity>>
+
+    @Query(
+        "SELECT CAST(strftime('%Y%m', date * 86400, 'unixepoch') AS INTEGER) AS period, " +
+            "COALESCE(SUM(amountCents),0) AS total " +
+            "FROM expense WHERE date >= :start AND date < :end GROUP BY period"
+    )
+    fun sumByMonth(start: Long, end: Long): Flow<List<PeriodSum>>
 
     @Query(
         "SELECT * FROM expense " +

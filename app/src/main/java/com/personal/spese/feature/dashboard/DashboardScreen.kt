@@ -1,11 +1,13 @@
 package com.personal.spese.feature.dashboard
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -32,13 +34,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.spese.core.util.Money
+import com.personal.spese.data.repository.MonthTotal
 import com.personal.spese.di.appContainer
 import com.personal.spese.di.viewModelFactory
 import com.personal.spese.ui.theme.CategoryColors
@@ -64,7 +73,8 @@ fun DashboardScreen(onOpenExpense: (Long) -> Unit = {}) {
     ) {
         MonthBar(label = s.monthLabel, onPrev = vm::prevMonth, onNext = vm::nextMonth)
         SummaryGrid(state = s)
-        CategoryBreakdown(shares = s.categories)
+        TrendSection(trend = s.trend)
+        CategoryBreakdown(shares = s.categories, totalCents = s.totalCents)
         RecentExpenses(rows = s.recent, onOpenExpense = onOpenExpense)
     }
 }
@@ -164,11 +174,105 @@ private fun ColorDot(color: Color, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun CategoryBreakdown(shares: List<CategoryShare>) {
+private fun TrendSection(trend: List<MonthTotal>) {
+    if (trend.isEmpty()) return
+    SectionTitle("Andamento (ultimi mesi)")
+    Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Column(Modifier.padding(16.dp)) {
+            TrendChart(
+                data = trend,
+                barColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.fillMaxWidth().height(120.dp)
+            )
+            Row(
+                Modifier.fillMaxWidth().padding(top = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                trend.forEach { m ->
+                    Text(
+                        m.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrendChart(data: List<MonthTotal>, barColor: Color, modifier: Modifier = Modifier) {
+    val max = (data.maxOfOrNull { it.totalCents } ?: 0L).coerceAtLeast(1L)
+    Canvas(modifier) {
+        val n = data.size
+        if (n == 0) return@Canvas
+        val gap = size.width * 0.04f
+        val barW = (size.width - gap * (n - 1)) / n
+        data.forEachIndexed { i, m ->
+            val h = if (m.totalCents <= 0L) 0f else size.height * (m.totalCents.toFloat() / max.toFloat())
+            val left = i * (barW + gap)
+            drawRoundRect(
+                color = barColor,
+                topLeft = Offset(left, size.height - h),
+                size = Size(barW, h),
+                cornerRadius = CornerRadius(8f, 8f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DonutChart(slices: List<Pair<Color, Float>>, modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val stroke = size.minDimension * 0.16f
+        val d = size.minDimension - stroke
+        val topLeft = Offset((size.width - d) / 2f, (size.height - d) / 2f)
+        var start = -90f
+        slices.forEach { (color, fraction) ->
+            val sweep = fraction * 360f
+            drawArc(
+                color = color,
+                startAngle = start,
+                sweepAngle = sweep,
+                useCenter = false,
+                topLeft = topLeft,
+                size = Size(d, d),
+                style = Stroke(width = stroke, cap = StrokeCap.Butt)
+            )
+            start += sweep
+        }
+    }
+}
+
+@Composable
+private fun CategoryBreakdown(shares: List<CategoryShare>, totalCents: Long) {
     SectionTitle("Ripartizione categorie")
     if (shares.isEmpty()) {
         EmptyHint("Nessuna spesa in questo mese.")
         return
+    }
+    Box(
+        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        DonutChart(
+            slices = shares.map { CategoryColors.forId(it.categoryId) to it.fraction },
+            modifier = Modifier.size(160.dp)
+        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                "Totale",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                Money.format(totalCents),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
     Column(
         Modifier

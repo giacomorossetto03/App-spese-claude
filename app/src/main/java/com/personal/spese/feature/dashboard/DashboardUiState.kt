@@ -1,5 +1,6 @@
 package com.personal.spese.feature.dashboard
 
+import com.personal.spese.data.repository.MonthTotal
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
@@ -31,6 +32,7 @@ data class DashboardUiState(
     val openInstallments: Int = 0,
     val installmentsResidualCents: Long = 0L,
     val categories: List<CategoryShare> = emptyList(),
+    val trend: List<MonthTotal> = emptyList(),
     val recent: List<RecentExpenseRow> = emptyList()
 ) {
     val monthLabel: String

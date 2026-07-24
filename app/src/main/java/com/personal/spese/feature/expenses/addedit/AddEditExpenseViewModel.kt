@@ -22,6 +22,9 @@ class AddEditExpenseViewModel(
     private val _state = MutableStateFlow(AddEditExpenseUiState(isEdit = expenseId != -1L))
     val state = _state.asStateFlow()
 
+    // Preservati in modifica: un'istanza ricorrente resta tale (niente duplicati alla generazione).
+    private var loadedRecurringId: Long? = null
+
     init {
         viewModelScope.launch {
             categories.observeActive().collect { cats ->
@@ -31,6 +34,7 @@ class AddEditExpenseViewModel(
         if (expenseId != -1L) {
             viewModelScope.launch {
                 expenses.getById(expenseId)?.let { e ->
+                    loadedRecurringId = e.recurringId
                     _state.update {
                         it.copy(
                             type = e.type,
@@ -70,7 +74,9 @@ class AddEditExpenseViewModel(
                     categoryId = s.categoryId!!,
                     note = s.note.trim().ifBlank { null },
                     paymentMethod = s.paymentMethod.trim().ifBlank { null },
-                    type = ExpenseType.SINGLE
+                    // Conserva tipo e riferimento ricorrente in modifica; nuova spesa = SINGLE.
+                    type = if (s.isEdit) s.type else ExpenseType.SINGLE,
+                    recurringId = loadedRecurringId
                 )
             )
             _state.update { it.copy(saved = true) }

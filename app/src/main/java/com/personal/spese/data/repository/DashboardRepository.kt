@@ -10,9 +10,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import java.time.YearMonth
+import java.time.format.TextStyle
+import java.util.Locale
 
 /** Riepilogo globale delle rate ancora aperte (non del solo mese). */
 data class InstallmentSummary(val openCount: Int, val residualCents: Long)
+
+/** Totale di un mese per il grafico andamento (etichetta breve + centesimi). */
+data class MonthTotal(val label: String, val totalCents: Long)
 
 /**
  * Milestone 6-7: aggregati per la dashboard.
@@ -68,4 +73,26 @@ class DashboardRepository(
     /** Ultime spese inserite (solo `expense`), per l'anteprima in dashboard. */
     fun recentExpenses(limit: Int = 5): Flow<List<Expense>> =
         expenseDao.observeRecent(limit).map { list -> list.map { it.toDomain() } }
+
+    /** Andamento degli ultimi [months] mesi fino a [ym] incluso: spese + rate dovute per mese. */
+    fun monthlyTrend(ym: YearMonth, months: Int): Flow<List<MonthTotal>> {
+        val first = ym.minusMonths((months - 1).toLong())
+        val start = first.atDay(1).toEpochDay()
+        val end = ym.plusMonths(1).atDay(1).toEpochDay()
+        return combine(
+            expenseDao.sumByMonth(start, end),
+            installmentEntryDao.sumDueByMonth(start, end)
+        ) { expenses, installments ->
+            val byPeriod = HashMap<Int, Long>()
+            (expenses + installments).forEach { ps ->
+                byPeriod[ps.period] = (byPeriod[ps.period] ?: 0L) + ps.total
+            }
+            (0 until months).map { i ->
+                val m = first.plusMonths(i.toLong())
+                val label = m.month.getDisplayName(TextStyle.SHORT, Locale.ITALY)
+                    .replaceFirstChar { it.uppercase(Locale.ITALY) }
+                MonthTotal(label, byPeriod[Dates.period(m)] ?: 0L)
+            }
+        }
+    }
 }
