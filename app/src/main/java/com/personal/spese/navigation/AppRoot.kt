@@ -1,5 +1,6 @@
 package com.personal.spese.navigation
 
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -61,7 +62,9 @@ fun AppRoot() {
         NavHost(
             navController = navController,
             startDestination = Routes.DASHBOARD,
-            modifier = Modifier.padding(padding)
+            modifier = Modifier
+                .padding(padding)
+                .consumeWindowInsets(padding)
         ) {
             composable(Routes.DASHBOARD) {
                 DashboardScreen(onOpenExpense = { id -> navController.navigate(Routes.addEdit(id = id)) })

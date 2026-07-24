@@ -51,4 +51,10 @@ interface InstallmentEntryDao {
 
     @Query("UPDATE installment_entry SET isPaid = :paid, paidDate = :paidDate WHERE id = :id")
     suspend fun setPaid(id: Long, paid: Boolean, paidDate: Long?)
+
+    @Query("SELECT * FROM installment_entry")
+    suspend fun getAll(): List<InstallmentEntryEntity>
+
+    @Query("DELETE FROM installment_entry")
+    suspend fun deleteAll()
 }

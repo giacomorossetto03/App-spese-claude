@@ -1,6 +1,7 @@
 package com.personal.spese.core.db.dao
 
 import androidx.room.Dao
+import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Upsert
 import com.personal.spese.core.db.entity.RecurringExpenseEntity
@@ -30,6 +31,15 @@ interface RecurringExpenseDao {
     @Upsert
     suspend fun upsert(recurring: RecurringExpenseEntity): Long
 
+    @Insert
+    suspend fun insertAll(items: List<RecurringExpenseEntity>)
+
     @Query("DELETE FROM recurring_expense WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("SELECT * FROM recurring_expense")
+    suspend fun getAll(): List<RecurringExpenseEntity>
+
+    @Query("DELETE FROM recurring_expense")
+    suspend fun deleteAll()
 }

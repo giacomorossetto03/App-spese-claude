@@ -14,6 +14,9 @@ interface InstallmentPlanDao {
     @Insert
     suspend fun insert(plan: InstallmentPlanEntity): Long
 
+    @Insert
+    suspend fun insertAll(plans: List<InstallmentPlanEntity>)
+
     @Query("SELECT * FROM installment_plan WHERE id = :id")
     suspend fun getById(id: Long): InstallmentPlanEntity?
 
@@ -35,4 +38,10 @@ interface InstallmentPlanDao {
 
     @Query("DELETE FROM installment_plan WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("SELECT * FROM installment_plan")
+    suspend fun getAll(): List<InstallmentPlanEntity>
+
+    @Query("DELETE FROM installment_plan")
+    suspend fun deleteAll()
 }

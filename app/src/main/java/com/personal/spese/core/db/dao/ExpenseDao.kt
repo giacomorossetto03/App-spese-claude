@@ -64,4 +64,10 @@ interface ExpenseDao {
 
     @Query("DELETE FROM expense WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("SELECT * FROM expense")
+    suspend fun getAll(): List<ExpenseEntity>
+
+    @Query("DELETE FROM expense")
+    suspend fun deleteAll()
 }

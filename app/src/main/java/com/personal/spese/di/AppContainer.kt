@@ -3,6 +3,7 @@ package com.personal.spese.di
 import android.content.Context
 import com.personal.spese.core.datastore.SettingsDataStore
 import com.personal.spese.core.db.AppDatabase
+import com.personal.spese.data.backup.BackupManager
 import com.personal.spese.data.repository.CategoryRepository
 import com.personal.spese.data.repository.DashboardRepository
 import com.personal.spese.data.repository.ExpenseRepository
@@ -38,6 +39,8 @@ class AppContainer(context: Context) {
     val recurringRepository = RecurringRepository(database.recurringExpenseDao())
 
     val recurringGenerator = RecurringGenerator(database.recurringExpenseDao(), database.expenseDao())
+
+    val backupManager = BackupManager(database)
 
     init {
         appScope.launch {

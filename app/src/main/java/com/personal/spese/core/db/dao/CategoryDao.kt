@@ -33,4 +33,10 @@ interface CategoryDao {
 
     @Query("UPDATE category SET isArchived = 0 WHERE id = :id")
     suspend fun unarchive(id: Long)
+
+    @Query("SELECT * FROM category")
+    suspend fun getAll(): List<CategoryEntity>
+
+    @Query("DELETE FROM category")
+    suspend fun deleteAll()
 }

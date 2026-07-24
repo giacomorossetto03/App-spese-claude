@@ -1,5 +1,9 @@
 package com.personal.spese.feature.settings
 
+import android.content.Context
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,27 +14,69 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.spese.core.model.ThemeMode
 import com.personal.spese.di.appContainer
 import com.personal.spese.di.viewModelFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun SettingsScreen(onOpenCategories: () -> Unit, onOpenRecurring: () -> Unit) {
     val container = appContainer()
     val vm: SettingsViewModel = viewModel(factory = viewModelFactory { SettingsViewModel(container.settings) })
     val theme by vm.themeMode.collectAsStateWithLifecycle()
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var confirmReset by remember { mutableStateOf(false) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) scope.launch {
+            runCatching {
+                val jsonText = container.backupManager.exportJson()
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(jsonText.toByteArray()) }
+                }
+            }.onSuccess { toast(context, "Backup esportato") }
+                .onFailure { toast(context, "Errore export: ${it.message}") }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) scope.launch {
+            runCatching {
+                val text = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                } ?: error("File non leggibile")
+                container.backupManager.importJson(text)
+            }.onSuccess { toast(context, "Backup importato") }
+                .onFailure { toast(context, "Errore import: ${it.message}") }
+        }
+    }
 
     Column(Modifier.padding(vertical = 12.dp)) {
         SectionLabel("Tema")
@@ -53,11 +99,48 @@ fun SettingsScreen(onOpenCategories: () -> Unit, onOpenRecurring: () -> Unit) {
 
         SettingRow(label = "Gestione categorie", onClick = onOpenCategories)
         SettingRow(label = "Spese ricorrenti", onClick = onOpenRecurring)
-        SettingRow(label = "Export dati (JSON/CSV)", subtitle = "Milestone 10", enabled = false, onClick = {})
-        SettingRow(label = "Import backup", subtitle = "Milestone 10", enabled = false, onClick = {})
-        SettingRow(label = "Reset dati", subtitle = "Milestone 10", enabled = false, onClick = {})
+
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        SectionLabel("Backup")
+        SettingRow(
+            label = "Esporta dati (JSON)",
+            subtitle = "Salva un backup di tutti i dati",
+            onClick = { exportLauncher.launch("spese-backup.json") }
+        )
+        SettingRow(
+            label = "Importa backup",
+            subtitle = "Sostituisce i dati attuali con quelli del file",
+            onClick = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }
+        )
+        SettingRow(
+            label = "Reset dati",
+            subtitle = "Cancella tutto e ripristina le categorie predefinite",
+            onClick = { confirmReset = true }
+        )
+    }
+
+    if (confirmReset) {
+        AlertDialog(
+            onDismissRequest = { confirmReset = false },
+            title = { Text("Azzerare tutti i dati?") },
+            text = { Text("Verranno eliminate spese, rate e ricorrenti. Le categorie tornano a quelle predefinite. Operazione non reversibile.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmReset = false
+                    scope.launch {
+                        runCatching { container.backupManager.resetToDefaults() }
+                            .onSuccess { toast(context, "Dati azzerati") }
+                            .onFailure { toast(context, "Errore reset: ${it.message}") }
+                    }
+                }) { Text("Azzera") }
+            },
+            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Annulla") } }
+        )
     }
 }
+
+private fun toast(context: Context, msg: String) =
+    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
 
 @Composable
 private fun SectionLabel(text: String) {
