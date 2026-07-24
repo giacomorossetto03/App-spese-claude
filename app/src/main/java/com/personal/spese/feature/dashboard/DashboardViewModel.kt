@@ -53,6 +53,7 @@ class DashboardViewModel(
                         id = e.id,
                         amountCents = e.amountCents,
                         date = e.date,
+                        categoryId = e.categoryId,
                         categoryName = nameById[e.categoryId] ?: "—",
                         note = e.note
                     )

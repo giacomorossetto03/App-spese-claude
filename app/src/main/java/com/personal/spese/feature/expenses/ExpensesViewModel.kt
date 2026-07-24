@@ -40,7 +40,7 @@ class ExpensesViewModel(
                     typeFilter = f.type,
                     categories = cats.filter { !it.isArchived },
                     rows = list.map { e ->
-                        ExpenseListRow(e.id, e.amountCents, e.date, nameById[e.categoryId] ?: "—", e.note, e.type)
+                        ExpenseListRow(e.id, e.amountCents, e.date, e.categoryId, nameById[e.categoryId] ?: "—", e.note, e.type)
                     }
                 )
             }

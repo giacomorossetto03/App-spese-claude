@@ -5,7 +5,10 @@ import java.time.LocalDate
 
 data class AddInstallmentPlanUiState(
     val title: String = "",
-    val amountInput: String = "",
+    // false = importo diretto (totale da pagare); true = prezzo base + interessi %.
+    val withInterest: Boolean = false,
+    val amountInput: String = "",    // prezzo (con interessi) oppure totale (senza)
+    val interestInput: String = "",  // percentuale, solo con interessi (vuota = 0%)
     val countInput: String = "",
     val firstDueDate: LocalDate = LocalDate.now(),
     val categoryId: Long? = null,

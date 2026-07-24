@@ -20,6 +20,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -87,16 +90,41 @@ fun AddInstallmentPlanScreen(onDone: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
             )
 
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+                val opts = listOf("Totale", "Con interessi")
+                opts.forEachIndexed { i, label ->
+                    SegmentedButton(
+                        selected = (i == 1) == s.withInterest,
+                        onClick = { vm.onWithInterestChange(i == 1) },
+                        shape = SegmentedButtonDefaults.itemShape(index = i, count = opts.size)
+                    ) { Text(label, maxLines = 1) }
+                }
+            }
+
             OutlinedTextField(
                 value = s.amountInput,
                 onValueChange = vm::onAmountChange,
-                label = { Text("Importo totale (€)") },
+                label = { Text(if (s.withInterest) "Prezzo (€)" else "Totale da pagare (€)") },
                 isError = s.amountError,
-                supportingText = { if (s.amountError) Text("Inserisci un importo valido") },
+                supportingText = {
+                    if (s.amountError) Text("Inserisci importo/percentuale validi")
+                    else if (!s.withInterest) Text("Per un piano già in corso, scrivi il residuo da pagare")
+                },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
             )
+
+            if (s.withInterest) {
+                OutlinedTextField(
+                    value = s.interestInput,
+                    onValueChange = vm::onInterestChange,
+                    label = { Text("Interessi (%)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+                )
+            }
 
             OutlinedTextField(
                 value = s.countInput,
@@ -126,7 +154,12 @@ fun AddInstallmentPlanScreen(onDone: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
             )
 
-            PreviewText(amountInput = s.amountInput, countInput = s.countInput)
+            PreviewText(
+                withInterest = s.withInterest,
+                amountInput = s.amountInput,
+                interestInput = s.interestInput,
+                countInput = s.countInput
+            )
 
             Button(
                 onClick = vm::save,
@@ -137,17 +170,18 @@ fun AddInstallmentPlanScreen(onDone: () -> Unit) {
 }
 
 @Composable
-private fun PreviewText(amountInput: String, countInput: String) {
-    val cents = Money.parseToCents(amountInput)
+private fun PreviewText(withInterest: Boolean, amountInput: String, interestInput: String, countInput: String) {
+    val total = installmentTotalCents(withInterest, amountInput, interestInput)
     val count = countInput.toIntOrNull()
-    val text = if (cents != null && cents > 0 && count != null && count >= 1) {
-        val base = cents / count
-        val remainder = cents - base * count
-        if (remainder == 0L) {
+    val text = if (total != null && total > 0L && count != null && count >= 1) {
+        val base = total / count
+        val remainder = total - base * count
+        val breakdown = if (remainder == 0L) {
             "$count rate da ${Money.format(base)}"
         } else {
             "${count - 1} rate da ${Money.format(base)} + ultima ${Money.format(base + remainder)}"
         }
+        "$breakdown\nTotale da pagare: ${Money.format(total)}"
     } else {
         "Inserisci importo e numero di rate per l'anteprima."
     }

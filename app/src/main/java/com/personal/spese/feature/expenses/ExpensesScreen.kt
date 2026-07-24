@@ -1,5 +1,6 @@
 package com.personal.spese.feature.expenses
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,6 +9,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -30,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -38,6 +42,7 @@ import com.personal.spese.core.model.ExpenseType
 import com.personal.spese.core.util.Money
 import com.personal.spese.di.appContainer
 import com.personal.spese.di.viewModelFactory
+import com.personal.spese.ui.theme.CategoryColors
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -164,7 +169,13 @@ private fun ExpenseRow(row: ExpenseListRow, onClick: () -> Unit, onDelete: () ->
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(Modifier.weight(1f).padding(end = 8.dp)) {
+        Box(
+            Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(CategoryColors.forId(row.categoryId))
+        )
+        Column(Modifier.weight(1f).padding(start = 10.dp, end = 8.dp)) {
             Text(row.categoryName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             val meta = buildString {
                 append(row.date.format(rowDateFmt))

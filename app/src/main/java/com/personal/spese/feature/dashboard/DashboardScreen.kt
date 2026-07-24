@@ -1,17 +1,26 @@
 package com.personal.spese.feature.dashboard
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Payments
+import androidx.compose.material.icons.outlined.Receipt
+import androidx.compose.material.icons.outlined.Savings
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -22,6 +31,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -29,6 +41,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.spese.core.util.Money
 import com.personal.spese.di.appContainer
 import com.personal.spese.di.viewModelFactory
+import com.personal.spese.ui.theme.CategoryColors
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -50,11 +63,8 @@ fun DashboardScreen(onOpenExpense: (Long) -> Unit = {}) {
             .verticalScroll(rememberScrollState())
     ) {
         MonthBar(label = s.monthLabel, onPrev = vm::prevMonth, onNext = vm::nextMonth)
-
         SummaryGrid(state = s)
-
         CategoryBreakdown(shares = s.categories)
-
         RecentExpenses(rows = s.recent, onOpenExpense = onOpenExpense)
     }
 }
@@ -88,11 +98,15 @@ private fun SummaryGrid(state: DashboardUiState) {
             SummaryCard(
                 title = "Totale mese",
                 value = Money.format(state.totalCents),
-                modifier = Modifier.weight(1f)
+                icon = Icons.Outlined.Payments,
+                modifier = Modifier.weight(1f),
+                container = MaterialTheme.colorScheme.primaryContainer,
+                content = MaterialTheme.colorScheme.onPrimaryContainer
             )
             SummaryCard(
                 title = "N° movimenti",
                 value = state.movementCount.toString(),
+                icon = Icons.Outlined.Receipt,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -100,11 +114,13 @@ private fun SummaryGrid(state: DashboardUiState) {
             SummaryCard(
                 title = "Rate aperte",
                 value = state.openInstallments.toString(),
+                icon = Icons.Outlined.CalendarMonth,
                 modifier = Modifier.weight(1f)
             )
             SummaryCard(
                 title = "Residuo rate",
                 value = Money.format(state.installmentsResidualCents),
+                icon = Icons.Outlined.Savings,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -112,22 +128,39 @@ private fun SummaryGrid(state: DashboardUiState) {
 }
 
 @Composable
-private fun SummaryCard(title: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier) {
+private fun SummaryCard(
+    title: String,
+    value: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    container: Color = MaterialTheme.colorScheme.surfaceVariant,
+    content: Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
+    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = container)) {
         Column(Modifier.padding(16.dp)) {
-            Text(
-                title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null, tint = content, modifier = Modifier.size(18.dp))
+                Text(
+                    title,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = content,
+                    modifier = Modifier.padding(start = 6.dp)
+                )
+            }
             Text(
                 value,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = 4.dp)
+                color = content,
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
     }
+}
+
+@Composable
+private fun ColorDot(color: Color, modifier: Modifier = Modifier) {
+    Box(modifier.size(10.dp).clip(CircleShape).background(color))
 }
 
 @Composable
@@ -144,12 +177,15 @@ private fun CategoryBreakdown(shares: List<CategoryShare>) {
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         shares.forEach { share ->
+            val color = CategoryColors.forId(share.categoryId)
             Column(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(share.categoryName, style = MaterialTheme.typography.bodyMedium)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    ColorDot(color)
+                    Text(
+                        share.categoryName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f).padding(start = 8.dp)
+                    )
                     Text(
                         Money.format(share.totalCents),
                         style = MaterialTheme.typography.bodyMedium,
@@ -158,9 +194,9 @@ private fun CategoryBreakdown(shares: List<CategoryShare>) {
                 }
                 LinearProgressIndicator(
                     progress = { share.fraction },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp)
+                    color = color,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
                 )
             }
         }
@@ -183,7 +219,8 @@ private fun RecentExpenses(rows: List<RecentExpenseRow>, onOpenExpense: (Long) -
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(Modifier.weight(1f).padding(end = 8.dp)) {
+                ColorDot(CategoryColors.forId(row.categoryId))
+                Column(Modifier.weight(1f).padding(start = 10.dp, end = 8.dp)) {
                     Text(
                         row.categoryName,
                         style = MaterialTheme.typography.bodyLarge,

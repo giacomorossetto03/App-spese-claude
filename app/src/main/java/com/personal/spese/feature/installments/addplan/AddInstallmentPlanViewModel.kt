@@ -11,6 +11,21 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+/**
+ * Totale-da-rateizzare (centesimi). Con [withInterest] il totale = prezzo × (1 + %/100);
+ * senza, è l'importo inserito direttamente (utile per piani già in corso: si scrive il
+ * residuo da pagare). Percentuale vuota = 0%. Null se input non valido.
+ */
+fun installmentTotalCents(withInterest: Boolean, amountInput: String, interestInput: String): Long? {
+    val base = Money.parseToCents(amountInput) ?: return null
+    if (base <= 0L) return null
+    if (!withInterest) return base
+    val rate = if (interestInput.isBlank()) 0.0
+    else interestInput.trim().replace(',', '.').toDoubleOrNull() ?: return null
+    if (rate < 0.0) return null
+    return Math.round(base * (100.0 + rate) / 100.0)
+}
+
 class AddInstallmentPlanViewModel(
     private val installments: InstallmentRepository,
     categories: CategoryRepository
@@ -23,17 +38,16 @@ class AddInstallmentPlanViewModel(
         viewModelScope.launch {
             categories.observeActive().collect { cats ->
                 _state.update { st ->
-                    st.copy(
-                        categories = cats,
-                        categoryId = st.categoryId ?: cats.firstOrNull()?.id
-                    )
+                    st.copy(categories = cats, categoryId = st.categoryId ?: cats.firstOrNull()?.id)
                 }
             }
         }
     }
 
     fun onTitleChange(v: String) = _state.update { it.copy(title = v, titleError = false) }
+    fun onWithInterestChange(v: Boolean) = _state.update { it.copy(withInterest = v, amountError = false) }
     fun onAmountChange(v: String) = _state.update { it.copy(amountInput = v, amountError = false) }
+    fun onInterestChange(v: String) = _state.update { it.copy(interestInput = v, amountError = false) }
     fun onCountChange(v: String) = _state.update { it.copy(countInput = v.filter(Char::isDigit), countError = false) }
     fun onDateChange(d: LocalDate) = _state.update { it.copy(firstDueDate = d) }
     fun onCategorySelect(id: Long) = _state.update { it.copy(categoryId = id, categoryError = false) }
@@ -41,11 +55,11 @@ class AddInstallmentPlanViewModel(
 
     fun save() {
         val st = _state.value
-        val cents = Money.parseToCents(st.amountInput)
+        val total = installmentTotalCents(st.withInterest, st.amountInput, st.interestInput)
         val count = st.countInput.toIntOrNull()
 
         val titleOk = st.title.isNotBlank()
-        val amountOk = cents != null && cents > 0
+        val amountOk = total != null && total > 0L
         val countOk = count != null && count >= 1
         val categoryOk = st.categoryId != null
 
@@ -64,7 +78,7 @@ class AddInstallmentPlanViewModel(
         viewModelScope.launch {
             installments.createPlan(
                 title = st.title,
-                totalAmountCents = cents!!,
+                totalAmountCents = total!!,
                 installmentsCount = count!!,
                 firstDueDate = st.firstDueDate,
                 categoryId = st.categoryId!!,

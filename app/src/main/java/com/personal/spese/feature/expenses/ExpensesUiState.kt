@@ -11,6 +11,7 @@ data class ExpenseListRow(
     val id: Long,
     val amountCents: Long,
     val date: LocalDate,
+    val categoryId: Long,
     val categoryName: String,
     val note: String?,
     val type: ExpenseType
