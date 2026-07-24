@@ -1,6 +1,7 @@
 package com.personal.spese.feature.widget
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -48,7 +49,7 @@ class SpeseWidget : GlanceAppWidget() {
                         .fillMaxSize()
                         .background(GlanceTheme.colors.widgetBackground)
                         .padding(16.dp)
-                        .clickable(actionStartActivity<MainActivity>())
+                        .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
                 ) {
                     Text(
                         "Spese · $monthLabel",
