@@ -9,7 +9,7 @@ proseguire le milestone verso l'MVP potendo ora **compilare e testare in locale*
 possibile nel sandbox chat dove il progetto è nato).
 
 ## Current Progress
-Milestone **1–8 complete** e presenti nel repo:
+Milestone **1–9 complete** e presenti nel repo:
 - **M1 Setup** — Gradle (version catalog), tema Material 3 chiaro/scuro, bottom nav 4 voci + FAB, scaffold navigazione.
 - **M2 Model + Room** — 6 entità, 5 DAO con query aggregate mese/rate/ricorrenti già scritte.
 - **M3 Categorie** — CRUD, seed 10 categorie default al primo avvio, archiviazione; selettore tema persistito su DataStore.
@@ -28,6 +28,17 @@ Milestone **1–8 complete** e presenti nel repo:
   `ExpenseDao.findRecurringInstance`, avanzando `lastGeneratedPeriod` YYYYMM; rispetta start/end e `dayOfMonth`
   1..28). Eseguito all'avvio (`AppContainer`) e dopo create/edit/riattivazione. UI `feature/recurring` (elenco +
   form) da Impostazioni → "Spese ricorrenti". Nessun nuovo calcolo in dashboard/lista: le istanze SONO `Expense`.
+- **M9 Widget (Glance)** — `feature/widget`: `SpeseWidget` (GlanceAppWidget) + `SpeseWidgetReceiver`, provider
+  `res/xml/spese_widget_info.xml`, receiver nel manifest. Mostra totale + n° movimenti del mese (letti dal DB via
+  `.first()` sui Flow dei DAO); usa `GlanceTheme` (Material 3); tap → apre l'app via `Intent(context, MainActivity)`.
+
+### Extra fuori-roadmap (richieste utente)
+- **Rate con interessi** (`feature/installments/addplan`): due modalità nel form — "Totale" (importo diretto,
+  per piani già in corso: si scrive il residuo) e "Con interessi" (prezzo × (1 + %/100)). Totale calcolato nel
+  ViewModel (`installmentTotalCents`); `createPlan` invariato → **nessuna modifica allo schema DB**.
+- **Restyling**: schema colori M3 con container; `ui/theme/CategoryColors` (colore per categoria dall'id, no DB);
+  dashboard con card+icone, card totale in primaryContainer, barre categoria colorate; pallini colore nelle liste.
+- **Fix pulsanti**: segmentati Ricorrente/Rateizzata nel form spesa → scorciatoie ai flussi dedicati.
 
 Incluso: **Gradle wrapper** completo (`gradlew` + `gradle-wrapper.jar`) e **CI** `.github/workflows/build-apk.yml`
 che compila l'APK **release**, lo carica come artifact **e** lo pubblica come **Release** (tag mobile `latest`,
@@ -61,17 +72,18 @@ link diretto al file `.apk`). ~60 file Kotlin.
   Gradle / Maven Central bloccati (403). Da lì non si compila → per questo si è passati a Claude Code in locale.
 - `gradle-wrapper.jar` è binario ed è **già incluso**: non rigenerarlo salvo necessità.
 
-## Next Steps — Milestone 9: Widget (Glance)
-Dipendenze Glance già nel catalog/`build.gradle` (`glance-appwidget`, `glance-material3`).
-1. `GlanceAppWidget` + `GlanceAppWidgetReceiver` (package `feature/widget` o `widget/`); dichiarare il receiver e
-   l'`appwidget-provider` XML nel `AndroidManifest`.
-2. Contenuto minimale: totale del mese corrente + n° movimenti (riuso `DashboardRepository`/DAO). Leggere i dati
-   in modo coerente (Glance usa `GlanceStateDefinition`/coroutine; niente Compose runtime dell'app).
-3. Tap sul widget → apre l'app (deep link `spese://add` già presente, o la dashboard).
-4. Aggiornamento: `updateAll` dopo modifiche rilevanti (o refresh periodico). Tenere il widget semplice.
+## Next Steps — Milestone 10: Export/Import (kotlinx.serialization)
+`kotlinx-serialization-json` già in dipendenze; in Impostazioni ci sono già le voci disabilitate
+(Export / Import / Reset) da abilitare.
+1. **Export**: serializzare tutte le entità (categorie, spese, piani+rate, ricorrenti) in un JSON (e opz. CSV
+   delle spese). Salvataggio via Storage Access Framework (`ActivityResultContracts.CreateDocument`).
+2. **Import**: leggere il JSON (`OpenDocument`), validare, e ripristinare in transazione (attenzione a id/FK:
+   reinserire con id azzerati e rimappare le referenze, oppure svuotare e reimportare).
+3. **Reset dati**: conferma forte → `clearAllTables()` (o cancellazioni ordinate rispettando le FK RESTRICT).
+4. Collegare i 3 `SettingRow` oggi `enabled = false`.
 
-**Attenzione:** Glance è un runtime separato (RemoteViews), non condivide i Composable dell'app. Poi M10
-Export/Import (kotlinx.serialization, già predisposto) e M11 rifinitura UX.
+**Attenzione:** con `fallbackToDestructiveMigration` non cambiare lo schema senza motivo (perdita dati sul device
+dell'utente). Poi M11 rifinitura UX. Nota: R8/minify è **off** nel release — abilitabile come ottimizzazione.
 
 ## Come ottenere l'APK
 - **Release (consigliato)**: GitHub → *Releases* → `latest` → scarica `app-release.apk` (release ottimizzata,
