@@ -14,7 +14,16 @@ Compose, MVVM + DI manuale). Il progetto è nato in un sandbox chat dove **non e
 Milestone: 1 Setup · 2 Model+Room · 3 Categorie · 4 Inserimento spesa · 5 Lista spese ·
 6 Dashboard · 7 Rate · 8 Ricorrenti · 9 Widget · 10 Export/Import · 11 Rifinitura UX — **tutte ✅**.
 
-### Fix calcolo ricorrenti/previsioni + widget (ultimissimo round)
+### Rate nella lista Spese (ultimissimo round)
+- La scheda **Spese** ora unisce `expense` + **rate dovute nel mese** (`installment_entry`). Nuova query
+  `InstallmentEntryDao.dueInMonthDetailed` (JOIN col piano per titolo/categoria/n° rate, filtro categoria) →
+  proiezione `InstallmentDueRow` → dominio `InstallmentDue`. `ExpensesViewModel` fonde le due sorgenti in
+  `ExpenseListRow` (`RowKind` SINGLE/RECURRING/INSTALLMENT), ordina per data desc, chiave lista `kind-id`.
+- Filtro: **Tutte/Singole/Ricorrenti/Rate** (`ExpenseFilter`). Riga rata: badge pagata/da pagare, "rata n/tot"
+  + titolo piano; tap/menu "Apri piano" → dettaglio (nessuna elimina della singola rata). Ora la lista è
+  coerente con la dashboard (totale/movimenti = expense + rate dovute).
+
+### Fix calcolo ricorrenti/previsioni + widget (round precedente)
 - **Ricorrenti omesse (bug reale)**: il confine d'inizio in `RecurringGenerator.generateUpTo` era a
   granularità **giorno** → se `dayOfMonth` precedeva il giorno della `startDate`, il **mese d'inizio
   veniva saltato**. Ora confine a granularità **mese**: il mese d'inizio è sempre incluso.
