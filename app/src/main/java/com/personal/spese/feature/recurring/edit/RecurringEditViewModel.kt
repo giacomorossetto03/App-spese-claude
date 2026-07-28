@@ -98,6 +98,10 @@ class RecurringEditViewModel(
                     lastGeneratedPeriod = lastGeneratedPeriod
                 )
             )
+            // In modifica: allinea le istanze già create ai nuovi valori (categoria/importo/titolo).
+            if (s.isEdit) {
+                generator.syncExistingInstances(recurringId, s.categoryId!!, cents, s.title.trim())
+            }
             // Materializza subito eventuali istanze dovute.
             generator.generateUpTo()
             _state.update { it.copy(saved = true) }

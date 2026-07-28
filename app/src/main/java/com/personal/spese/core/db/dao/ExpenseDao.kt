@@ -53,6 +53,16 @@ interface ExpenseDao {
     @Query("SELECT * FROM expense WHERE recurringId = :recurringId AND date >= :start AND date < :end LIMIT 1")
     suspend fun findRecurringInstance(recurringId: Long, start: Long, end: Long): ExpenseEntity?
 
+    /**
+     * Propaga la modifica di una regola ricorrente alle istanze già materializzate
+     * (categoria/importo/descrizione), così cambiare il template si riflette sulle spese esistenti.
+     */
+    @Query(
+        "UPDATE expense SET categoryId = :categoryId, amountCents = :amountCents, note = :note " +
+            "WHERE recurringId = :recurringId AND type = 'RECURRING_INSTANCE'"
+    )
+    suspend fun updateRecurringInstances(recurringId: Long, categoryId: Long, amountCents: Long, note: String?)
+
     @Upsert
     suspend fun upsert(expense: ExpenseEntity): Long
 

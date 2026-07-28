@@ -34,9 +34,16 @@ import com.personal.spese.feature.expenses.addedit.AddEditExpenseScreen
 import com.personal.spese.feature.installments.InstallmentsScreen
 import com.personal.spese.feature.installments.addplan.AddInstallmentPlanScreen
 import com.personal.spese.feature.installments.detail.InstallmentDetailScreen
+import com.personal.spese.feature.installments.edit.EditInstallmentPlanScreen
 import com.personal.spese.feature.recurring.RecurringListScreen
 import com.personal.spese.feature.recurring.edit.RecurringEditScreen
 import com.personal.spese.feature.settings.SettingsScreen
+import com.personal.spese.feature.update.UpdateGate
+import com.personal.spese.feature.update.UpdateViewModel
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.personal.spese.di.appContainer
+import com.personal.spese.di.viewModelFactory
 
 private data class NavItem(val route: String, val label: String, val icon: ImageVector)
 
@@ -46,6 +53,13 @@ fun AppRoot() {
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
     val showBars = currentRoute in Routes.mainRoutes
+
+    // ViewModel aggiornamenti condiviso: check automatico all'avvio + bottone manuale in Impostazioni.
+    val container = appContainer()
+    val appContext = LocalContext.current.applicationContext
+    val updateVm: UpdateViewModel = viewModel(
+        factory = viewModelFactory { UpdateViewModel(container.updateService, appContext) }
+    )
 
     Scaffold(
         bottomBar = {
@@ -86,12 +100,24 @@ fun AppRoot() {
                 arguments = listOf(navArgument("planId") { type = NavType.LongType })
             ) { entry ->
                 val planId = entry.arguments?.getLong("planId") ?: -1L
-                InstallmentDetailScreen(planId = planId, onBack = { navController.popBackStack() })
+                InstallmentDetailScreen(
+                    planId = planId,
+                    onBack = { navController.popBackStack() },
+                    onEdit = { id -> navController.navigate(Routes.installmentEdit(id)) }
+                )
+            }
+            composable(
+                route = Routes.INSTALLMENT_EDIT,
+                arguments = listOf(navArgument("planId") { type = NavType.LongType })
+            ) { entry ->
+                val planId = entry.arguments?.getLong("planId") ?: -1L
+                EditInstallmentPlanScreen(planId = planId, onDone = { navController.popBackStack() })
             }
             composable(Routes.SETTINGS) {
                 SettingsScreen(
                     onOpenCategories = { navController.navigate(Routes.CATEGORIES) },
-                    onOpenRecurring = { navController.navigate(Routes.RECURRING) }
+                    onOpenRecurring = { navController.navigate(Routes.RECURRING) },
+                    updateVm = updateVm
                 )
             }
             composable(Routes.RECURRING) {
@@ -128,6 +154,9 @@ fun AppRoot() {
                 )
             }
         }
+
+        // Avviso/gestione aggiornamenti, sempre in composizione (dialog globale).
+        UpdateGate(updateVm)
     }
 }
 

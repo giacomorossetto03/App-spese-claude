@@ -34,6 +34,10 @@ class InstallmentRepository(private val db: AppDatabase) {
 
     suspend fun deletePlan(id: Long) = planDao.deleteById(id)
 
+    /** Modifica i metadati del piano (titolo, categoria, nota). Struttura rate invariata. */
+    suspend fun updatePlanMeta(id: Long, title: String, categoryId: Long, note: String?) =
+        planDao.updateMeta(id, title.trim(), categoryId, note?.trim()?.ifBlank { null })
+
     /**
      * Crea piano + rate in un'unica transazione (invariante: nessun piano senza rate).
      * Arrotondamento: `rata = floor(totale/n)`, l'**ultima** rata assorbe il resto.

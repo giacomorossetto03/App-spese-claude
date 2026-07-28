@@ -36,6 +36,10 @@ interface InstallmentPlanDao {
     )
     fun observePlansProgress(): Flow<List<PlanProgress>>
 
+    /** Aggiorna solo i metadati del piano (non la struttura: importo/rate/scadenze restano). */
+    @Query("UPDATE installment_plan SET title = :title, categoryId = :categoryId, note = :note WHERE id = :id")
+    suspend fun updateMeta(id: Long, title: String, categoryId: Long, note: String?)
+
     @Query("DELETE FROM installment_plan WHERE id = :id")
     suspend fun deleteById(id: Long)
 

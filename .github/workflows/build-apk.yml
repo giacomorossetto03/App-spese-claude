@@ -28,9 +28,20 @@ jobs:
       - name: Grant execute permission to gradlew
         run: chmod +x ./gradlew
 
-      # APK release (non-debuggable → fluido), firmato con la debug key = installabile.
+      # APK release (non-debuggable → fluido), firmato con la chiave STABILE del repo →
+      # aggiornamenti in-place. versionCode = numero build (crescente) per il controllo update.
       - name: Build release APK
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 1.0.${{ github.run_number }}
         run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      # Metadati letti dall'app per sapere se c'è una versione più recente.
+      - name: Write version.json
+        run: |
+          cat > version.json <<EOF
+          {"versionCode": ${{ github.run_number }}, "versionName": "1.0.${{ github.run_number }}", "notes": "Build dal branch ${{ github.ref_name }}."}
+          EOF
 
       - name: Upload APK (artifact)
         uses: actions/upload-artifact@v4
@@ -39,8 +50,8 @@ jobs:
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
-      # Pubblica l'APK come Release: link diretto e permanente al file .apk.
-      # Il tag "latest" viene aggiornato a ogni build, quindi punta sempre all'ultimo APK.
+      # Pubblica APK + version.json come Release: link diretto e permanente ai file.
+      # Il tag "latest" viene aggiornato a ogni build, quindi punta sempre all'ultima versione.
       - name: Publish APK to Release
         uses: softprops/action-gh-release@v2
         with:
@@ -48,8 +59,10 @@ jobs:
           name: Spese — APK (ultima build)
           body: |
             APK release ottimizzato (non-debuggable → fluido su dispositivi mid-range),
-            firmato con la debug key quindi installabile direttamente.
+            firmato con una chiave stabile → aggiornabile in-place senza disinstallare.
             minSdk 26 / target 35 → compatibile con Android 14.
-            Build automatica dal branch `${{ github.ref_name }}` — commit `${{ github.sha }}`.
-          files: app/build/outputs/apk/release/app-release.apk
+            Versione `1.0.${{ github.run_number }}` — branch `${{ github.ref_name }}`, commit `${{ github.sha }}`.
+          files: |
+            app/build/outputs/apk/release/app-release.apk
+            version.json
           make_latest: true

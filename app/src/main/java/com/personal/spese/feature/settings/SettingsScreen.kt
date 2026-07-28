@@ -40,16 +40,22 @@ import com.personal.spese.core.model.ThemeMode
 import com.personal.spese.core.util.Money
 import com.personal.spese.di.appContainer
 import com.personal.spese.di.viewModelFactory
+import com.personal.spese.feature.update.UpdateViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun SettingsScreen(onOpenCategories: () -> Unit, onOpenRecurring: () -> Unit) {
+fun SettingsScreen(
+    onOpenCategories: () -> Unit,
+    onOpenRecurring: () -> Unit,
+    updateVm: UpdateViewModel? = null
+) {
     val container = appContainer()
     val vm: SettingsViewModel = viewModel(factory = viewModelFactory { SettingsViewModel(container.settings) })
     val theme by vm.themeMode.collectAsStateWithLifecycle()
     val budgetCents by vm.monthlyBudgetCents.collectAsStateWithLifecycle()
+    val updateState = updateVm?.state?.collectAsStateWithLifecycle()?.value
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -147,6 +153,21 @@ fun SettingsScreen(onOpenCategories: () -> Unit, onOpenRecurring: () -> Unit) {
             subtitle = "Cancella tutto e ripristina le categorie predefinite",
             onClick = { confirmReset = true }
         )
+
+        if (updateVm != null) {
+            val availableVersion = updateState?.available?.versionName
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            SectionLabel("Aggiornamenti")
+            SettingRow(
+                label = "Controlla aggiornamenti",
+                subtitle = when {
+                    updateState?.checking == true -> "Controllo in corso…"
+                    availableVersion != null -> "Disponibile v$availableVersion"
+                    else -> "Versione attuale ${updateVm.currentVersionName}"
+                },
+                onClick = { updateVm.check(manual = true) }
+            )
+        }
     }
 
     if (confirmReset) {

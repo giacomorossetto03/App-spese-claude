@@ -21,6 +21,15 @@ class RecurringGenerator(
     private val expenseDao: ExpenseDao
 ) {
 
+    /**
+     * Allinea le istanze già materializzate ai nuovi valori della regola (categoria/importo/titolo).
+     * Da chiamare dopo la modifica di una ricorrente: la generazione è idempotente e non
+     * toccherebbe i mesi già creati, quindi senza questo passaggio la modifica non si vedrebbe.
+     */
+    suspend fun syncExistingInstances(ruleId: Long, categoryId: Long, amountCents: Long, title: String) {
+        expenseDao.updateRecurringInstances(ruleId, categoryId, amountCents, title)
+    }
+
     suspend fun generateUpTo(today: LocalDate = Dates.today()) {
         val currentYm = YearMonth.from(today)
         val currentPeriod = Dates.period(currentYm)

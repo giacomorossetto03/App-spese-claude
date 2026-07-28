@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
@@ -45,7 +46,7 @@ private val dueFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.ITALY)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InstallmentDetailScreen(planId: Long, onBack: () -> Unit) {
+fun InstallmentDetailScreen(planId: Long, onBack: () -> Unit, onEdit: (Long) -> Unit = {}) {
     val container = appContainer()
     val vm: InstallmentDetailViewModel = viewModel(
         factory = viewModelFactory {
@@ -65,6 +66,11 @@ fun InstallmentDetailScreen(planId: Long, onBack: () -> Unit) {
                     }
                 },
                 actions = {
+                    if (s.loaded) {
+                        IconButton(onClick = { onEdit(planId) }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Modifica piano")
+                        }
+                    }
                     IconButton(onClick = { confirmDelete = true }) {
                         Icon(Icons.Filled.Delete, contentDescription = "Elimina piano")
                     }

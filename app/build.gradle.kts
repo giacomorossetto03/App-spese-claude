@@ -6,6 +6,11 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// versionCode/versionName vengono dalla CI (VERSION_CODE = numero build, monotòno crescente),
+// così l'app installata sa se sul repo c'è una versione più recente. Fallback per build locali.
+val appVersionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
+val appVersionName = System.getenv("VERSION_NAME") ?: "1.0.$appVersionCode"
+
 android {
     namespace = "com.personal.spese"
     compileSdk = 35
@@ -14,9 +19,21 @@ android {
         applicationId = "com.personal.spese"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
         vectorDrawables { useSupportLibrary = true }
+    }
+
+    signingConfigs {
+        // Chiave di firma STABILE (release.keystore nel repo): stessa firma a ogni build →
+        // aggiornamenti in-place senza disinstallare. Per un'app personale offline la chiave
+        // committata è un compromesso accettabile (serve solo a consentire gli update).
+        create("release") {
+            storeFile = file("release.keystore")
+            storePassword = "spese-release"
+            keyAlias = "spese"
+            keyPassword = "spese-release"
+        }
     }
 
     buildTypes {
@@ -24,9 +41,7 @@ android {
             // R8: shrinking + ottimizzazione. Le keep-rule per kotlinx.serialization
             // sono in proguard-rules.pro; Room/Compose/Glance/DataStore portano le proprie.
             isMinifyEnabled = true
-            // Firmato con la debug key: APK release (non-debuggable, fluido) ma
-            // installabile direttamente senza un keystore dedicato.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -38,7 +53,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true // espone BuildConfig.VERSION_CODE/NAME al controllo aggiornamenti
+    }
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     }

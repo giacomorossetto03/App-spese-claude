@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- APK di aggiornamento scaricato in cache/updates, condiviso via FileProvider. -->
+    <cache-path name="updates" path="updates/" />
+</paths>

@@ -17,6 +17,9 @@ object Routes {
     const val INSTALLMENT_DETAIL = "installmentDetail/{planId}"
     fun installmentDetail(planId: Long): String = "installmentDetail/$planId"
 
+    const val INSTALLMENT_EDIT = "installmentEdit/{planId}"
+    fun installmentEdit(planId: Long): String = "installmentEdit/$planId"
+
     const val RECURRING = "recurring"
     const val RECURRING_EDIT = "recurringEdit?id={id}"
     fun recurringEdit(id: Long? = null): String = "recurringEdit?id=${id ?: -1L}"
