@@ -14,7 +14,26 @@ Compose, MVVM + DI manuale). Il progetto è nato in un sandbox chat dove **non e
 Milestone: 1 Setup · 2 Model+Room · 3 Categorie · 4 Inserimento spesa · 5 Lista spese ·
 6 Dashboard · 7 Rate · 8 Ricorrenti · 9 Widget · 10 Export/Import · 11 Rifinitura UX — **tutte ✅**.
 
-### Fix/feature aggiunti (ultimo round)
+### Fix calcolo ricorrenti/previsioni + widget (ultimissimo round)
+- **Ricorrenti omesse (bug reale)**: il confine d'inizio in `RecurringGenerator.generateUpTo` era a
+  granularità **giorno** → se `dayOfMonth` precedeva il giorno della `startDate`, il **mese d'inizio
+  veniva saltato**. Ora confine a granularità **mese**: il mese d'inizio è sempre incluso.
+- **Previsioni**: `generateUpTo(monthsAhead = 12)` materializza fino a 12 mesi avanti (prima solo mese
+  corrente → mesi futuri vuoti). Disattivazione/eliminazione/modifica di una ricorrente ora rimuove le
+  istanze **future** (`ExpenseDao.deleteFutureRecurringInstances`, chiamata da `removeFutureInstances`),
+  mantenendo lo storico; riattivazione azzera il cursore e rigenera; la modifica ricostruisce le future
+  secondo la regola aggiornata (range/giorno/importo). Anteprima "Ultime spese" esclude le previsioni
+  future (`observeRecent(maxDate = oggi, limit)`).
+- **Widget aggiornamento**: aggiunto observer su `database.invalidationTracker` (tabelle expense,
+  installment_entry, installment_plan, recurring_expense) in `AppContainer` → `SpeseWidget().updateAll`
+  a ogni modifica dati + refresh all'avvio. Prima non c'era alcun trigger → widget "congelato".
+- **Widget grafici**: la barra era un **Bitmap** via Glance `Image` (non renderizzato da molti launcher).
+  Riscritta con **elementi Glance nativi**: barra proporzionale a 24 celle a peso uguale + legenda top-3
+  categorie (quadratino colorato + nome · importo).
+- **Rate nel conteggio**: NON è un bug. Le rate sono contate in dashboard (`sum(expense)+sumDue`); non
+  compaiono nella scheda **Spese** perché per invariante vivono in `installment_entry` (lista = solo `expense`).
+
+### Fix/feature aggiunti (round precedente)
 - **Fix ricorrenti**: modificare una regola ricorrente (categoria/importo/titolo) ora **propaga**
   alle istanze già materializzate. Prima `generateUpTo()` (idempotente) non toccava i mesi già creati →
   la modifica non si vedeva. Ora `RecurringEditViewModel` chiama `RecurringGenerator.syncExistingInstances`
