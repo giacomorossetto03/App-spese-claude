@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import com.personal.spese.core.db.entity.InstallmentEntryEntity
 import com.personal.spese.core.model.CategorySum
+import com.personal.spese.core.model.InstallmentDueRow
 import com.personal.spese.core.model.PeriodSum
 import kotlinx.coroutines.flow.Flow
 
@@ -25,6 +26,21 @@ interface InstallmentEntryDao {
 
     @Query("SELECT * FROM installment_entry WHERE dueDate >= :start AND dueDate < :end ORDER BY dueDate")
     fun dueInMonth(start: Long, end: Long): Flow<List<InstallmentEntryEntity>>
+
+    /**
+     * Rate dovute nel mese con i metadati del piano (titolo, categoria, n° totale rate), filtrabili
+     * per categoria. Serve alla lista spese per mostrare le rate accanto alle spese vere.
+     */
+    @Query(
+        "SELECT e.id AS entryId, e.planId AS planId, e.number AS number, " +
+            "p.installmentsCount AS installmentsCount, p.title AS title, p.categoryId AS categoryId, " +
+            "e.amountCents AS amountCents, e.dueDate AS dueDate, e.isPaid AS isPaid " +
+            "FROM installment_entry e JOIN installment_plan p ON p.id = e.planId " +
+            "WHERE e.dueDate >= :start AND e.dueDate < :end " +
+            "AND (:categoryId IS NULL OR p.categoryId = :categoryId) " +
+            "ORDER BY e.dueDate DESC, e.id DESC"
+    )
+    fun dueInMonthDetailed(start: Long, end: Long, categoryId: Long?): Flow<List<InstallmentDueRow>>
 
     @Query("SELECT COALESCE(SUM(amountCents),0) FROM installment_entry WHERE dueDate >= :start AND dueDate < :end")
     fun sumDueInMonth(start: Long, end: Long): Flow<Long>

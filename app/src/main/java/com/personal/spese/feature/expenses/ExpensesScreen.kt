@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -40,7 +41,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.personal.spese.core.model.ExpenseType
 import com.personal.spese.core.util.Money
 import com.personal.spese.di.appContainer
 import com.personal.spese.di.viewModelFactory
@@ -51,10 +51,12 @@ import java.util.Locale
 private val rowDateFmt = DateTimeFormatter.ofPattern("dd/MM", Locale.ITALY)
 
 @Composable
-fun ExpensesScreen(onEdit: (Long) -> Unit) {
+fun ExpensesScreen(onEdit: (Long) -> Unit, onOpenPlan: (Long) -> Unit) {
     val container = appContainer()
     val vm: ExpensesViewModel = viewModel(
-        factory = viewModelFactory { ExpensesViewModel(container.expenseRepository, container.categoryRepository) }
+        factory = viewModelFactory {
+            ExpensesViewModel(container.expenseRepository, container.installmentRepository, container.categoryRepository)
+        }
     )
     val s by vm.uiState.collectAsStateWithLifecycle()
     var pendingDelete by remember { mutableStateOf<Long?>(null) }
@@ -64,24 +66,31 @@ fun ExpensesScreen(onEdit: (Long) -> Unit) {
         FiltersRow(
             categories = s.categories.map { it.id to it.name },
             categoryFilter = s.categoryFilter,
-            typeFilter = s.typeFilter,
+            filter = s.filter,
             onCategory = vm::setCategory,
-            onType = vm::setType
+            onFilter = vm::setFilter
         )
         HorizontalDivider()
 
         if (s.rows.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    "Nessuna spesa in questo mese.",
+                    "Niente da mostrare in questo mese.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         } else {
             LazyColumn(Modifier.fillMaxSize()) {
-                items(s.rows, key = { it.id }) { row ->
-                    ExpenseRow(row = row, onClick = { onEdit(row.id) }, onDelete = { pendingDelete = row.id })
+                items(s.rows, key = { it.listKey }) { row ->
+                    ExpenseRow(
+                        row = row,
+                        onClick = {
+                            if (row.kind == RowKind.INSTALLMENT) row.planId?.let(onOpenPlan)
+                            else onEdit(row.id)
+                        },
+                        onDelete = { pendingDelete = row.id }
+                    )
                     HorizontalDivider()
                 }
             }
@@ -122,9 +131,9 @@ private fun MonthBar(label: String, onPrev: () -> Unit, onNext: () -> Unit) {
 private fun FiltersRow(
     categories: List<Pair<Long, String>>,
     categoryFilter: Long?,
-    typeFilter: ExpenseType?,
+    filter: ExpenseFilter,
     onCategory: (Long?) -> Unit,
-    onType: (ExpenseType?) -> Unit
+    onFilter: (ExpenseFilter) -> Unit
 ) {
     Row(
         Modifier
@@ -136,19 +145,24 @@ private fun FiltersRow(
     ) {
         CategoryFilter(categories, categoryFilter, onCategory)
         FilterChip(
-            selected = typeFilter == null,
-            onClick = { onType(null) },
+            selected = filter == ExpenseFilter.ALL,
+            onClick = { onFilter(ExpenseFilter.ALL) },
             label = { Text("Tutte") }
         )
         FilterChip(
-            selected = typeFilter == ExpenseType.SINGLE,
-            onClick = { onType(ExpenseType.SINGLE) },
+            selected = filter == ExpenseFilter.SINGLE,
+            onClick = { onFilter(ExpenseFilter.SINGLE) },
             label = { Text("Singole") }
         )
         FilterChip(
-            selected = typeFilter == ExpenseType.RECURRING_INSTANCE,
-            onClick = { onType(ExpenseType.RECURRING_INSTANCE) },
+            selected = filter == ExpenseFilter.RECURRING,
+            onClick = { onFilter(ExpenseFilter.RECURRING) },
             label = { Text("Ricorrenti") }
+        )
+        FilterChip(
+            selected = filter == ExpenseFilter.INSTALLMENT,
+            onClick = { onFilter(ExpenseFilter.INSTALLMENT) },
+            label = { Text("Rate") }
         )
     }
 }
@@ -190,9 +204,16 @@ private fun ExpenseRow(row: ExpenseListRow, onClick: () -> Unit, onDelete: () ->
             val meta = buildString {
                 append(row.date.format(rowDateFmt))
                 if (!row.note.isNullOrBlank()) append(" · ${row.note}")
-                if (row.type == ExpenseType.RECURRING_INSTANCE) append(" · ricorrente")
+                when (row.kind) {
+                    RowKind.RECURRING -> append(" · ricorrente")
+                    RowKind.INSTALLMENT -> row.installmentInfo?.let { append(" · rata $it") }
+                    RowKind.SINGLE -> {}
+                }
             }
             Text(meta, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (row.kind == RowKind.INSTALLMENT) {
+            InstallmentTag(isPaid = row.isPaid)
         }
         Text(Money.format(row.amountCents), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
         Box {
@@ -200,9 +221,32 @@ private fun ExpenseRow(row: ExpenseListRow, onClick: () -> Unit, onDelete: () ->
                 Icon(Icons.Filled.MoreVert, contentDescription = "Altre azioni")
             }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(text = { Text("Modifica") }, onClick = { menu = false; onClick() })
-                DropdownMenuItem(text = { Text("Elimina") }, onClick = { menu = false; onDelete() })
+                if (row.kind == RowKind.INSTALLMENT) {
+                    DropdownMenuItem(text = { Text("Apri piano") }, onClick = { menu = false; onClick() })
+                } else {
+                    DropdownMenuItem(text = { Text("Modifica") }, onClick = { menu = false; onClick() })
+                    DropdownMenuItem(text = { Text("Elimina") }, onClick = { menu = false; onDelete() })
+                }
             }
         }
     }
+}
+
+/** Etichetta a pillola per lo stato di una rata (pagata / da pagare). */
+@Composable
+private fun InstallmentTag(isPaid: Boolean) {
+    val bg = if (isPaid) MaterialTheme.colorScheme.secondaryContainer
+    else MaterialTheme.colorScheme.tertiaryContainer
+    val fg = if (isPaid) MaterialTheme.colorScheme.onSecondaryContainer
+    else MaterialTheme.colorScheme.onTertiaryContainer
+    Text(
+        text = if (isPaid) "pagata" else "da pagare",
+        style = MaterialTheme.typography.labelSmall,
+        color = fg,
+        modifier = Modifier
+            .padding(end = 8.dp)
+            .clip(RoundedCornerShape(50))
+            .background(bg)
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+    )
 }

@@ -84,7 +84,10 @@ fun AppRoot() {
                 DashboardScreen(onOpenExpense = { id -> navController.navigate(Routes.addEdit(id = id)) })
             }
             composable(Routes.EXPENSES) {
-                ExpensesScreen(onEdit = { id -> navController.navigate(Routes.addEdit(id = id)) })
+                ExpensesScreen(
+                    onEdit = { id -> navController.navigate(Routes.addEdit(id = id)) },
+                    onOpenPlan = { id -> navController.navigate(Routes.installmentDetail(id)) }
+                )
             }
             composable(Routes.INSTALLMENTS) {
                 InstallmentsScreen(

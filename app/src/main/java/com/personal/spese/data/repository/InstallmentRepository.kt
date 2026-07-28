@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import com.personal.spese.core.db.AppDatabase
 import com.personal.spese.core.db.entity.InstallmentEntryEntity
 import com.personal.spese.core.db.entity.InstallmentPlanEntity
+import com.personal.spese.core.model.InstallmentDue
 import com.personal.spese.core.model.InstallmentEntry
 import com.personal.spese.core.model.InstallmentPlan
 import com.personal.spese.core.model.PlanProgress
@@ -12,6 +13,7 @@ import com.personal.spese.data.mapper.toDomain
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
+import java.time.YearMonth
 
 /**
  * Milestone 7: piani di rate. Le rate NON sono [com.personal.spese.core.model.Expense]:
@@ -28,6 +30,26 @@ class InstallmentRepository(private val db: AppDatabase) {
 
     fun observeEntries(planId: Long): Flow<List<InstallmentEntry>> =
         entryDao.observeByPlan(planId).map { list -> list.map { it.toDomain() } }
+
+    /** Rate dovute nel mese (con metadati piano), per la lista spese. Filtro categoria opzionale. */
+    fun observeDueInMonth(ym: YearMonth, categoryId: Long?): Flow<List<InstallmentDue>> {
+        val (start, end) = Dates.monthBounds(ym)
+        return entryDao.dueInMonthDetailed(start, end, categoryId).map { list ->
+            list.map { r ->
+                InstallmentDue(
+                    entryId = r.entryId,
+                    planId = r.planId,
+                    number = r.number,
+                    installmentsCount = r.installmentsCount,
+                    title = r.title,
+                    categoryId = r.categoryId,
+                    amountCents = r.amountCents,
+                    dueDate = Dates.fromEpochDay(r.dueDate),
+                    isPaid = r.isPaid
+                )
+            }
+        }
+    }
 
     suspend fun setPaid(entryId: Long, paid: Boolean) =
         entryDao.setPaid(entryId, paid, if (paid) Dates.today().toEpochDay() else null)
