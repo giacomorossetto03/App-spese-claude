@@ -21,7 +21,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8: shrinking + ottimizzazione. Le keep-rule per kotlinx.serialization
+            // sono in proguard-rules.pro; Room/Compose/Glance/DataStore portano le proprie.
+            isMinifyEnabled = true
             // Firmato con la debug key: APK release (non-debuggable, fluido) ma
             // installabile direttamente senza un keystore dedicato.
             signingConfig = signingConfigs.getByName("debug")

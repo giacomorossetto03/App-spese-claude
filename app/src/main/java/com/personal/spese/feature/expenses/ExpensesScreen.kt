@@ -2,6 +2,8 @@ package com.personal.spese.feature.expenses
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -125,7 +127,10 @@ private fun FiltersRow(
     onType: (ExpenseType?) -> Unit
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -139,6 +144,11 @@ private fun FiltersRow(
             selected = typeFilter == ExpenseType.SINGLE,
             onClick = { onType(ExpenseType.SINGLE) },
             label = { Text("Singole") }
+        )
+        FilterChip(
+            selected = typeFilter == ExpenseType.RECURRING_INSTANCE,
+            onClick = { onType(ExpenseType.RECURRING_INSTANCE) },
+            label = { Text("Ricorrenti") }
         )
     }
 }

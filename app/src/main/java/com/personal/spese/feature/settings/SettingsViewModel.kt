@@ -13,5 +13,10 @@ class SettingsViewModel(private val settings: SettingsDataStore) : ViewModel() {
     val themeMode = settings.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThemeMode.SYSTEM)
 
+    val monthlyBudgetCents = settings.monthlyBudgetCents
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0L)
+
     fun setTheme(mode: ThemeMode) = viewModelScope.launch { settings.setThemeMode(mode) }
+
+    fun setBudget(cents: Long) = viewModelScope.launch { settings.setMonthlyBudget(cents) }
 }

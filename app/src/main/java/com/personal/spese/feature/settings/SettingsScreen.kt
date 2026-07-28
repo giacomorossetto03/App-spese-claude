@@ -12,12 +12,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,10 +32,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.spese.core.model.ThemeMode
+import com.personal.spese.core.util.Money
 import com.personal.spese.di.appContainer
 import com.personal.spese.di.viewModelFactory
 import kotlinx.coroutines.Dispatchers
@@ -45,10 +49,12 @@ fun SettingsScreen(onOpenCategories: () -> Unit, onOpenRecurring: () -> Unit) {
     val container = appContainer()
     val vm: SettingsViewModel = viewModel(factory = viewModelFactory { SettingsViewModel(container.settings) })
     val theme by vm.themeMode.collectAsStateWithLifecycle()
+    val budgetCents by vm.monthlyBudgetCents.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var confirmReset by remember { mutableStateOf(false) }
+    var budgetDialog by remember { mutableStateOf(false) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -78,6 +84,20 @@ fun SettingsScreen(onOpenCategories: () -> Unit, onOpenRecurring: () -> Unit) {
         }
     }
 
+    val csvLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        if (uri != null) scope.launch {
+            runCatching {
+                val csv = container.backupManager.exportExpensesCsv()
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(csv.toByteArray()) }
+                }
+            }.onSuccess { toast(context, "CSV esportato") }
+                .onFailure { toast(context, "Errore CSV: ${it.message}") }
+        }
+    }
+
     Column(Modifier.padding(vertical = 12.dp)) {
         SectionLabel("Tema")
         Column(Modifier.selectableGroup()) {
@@ -99,6 +119,11 @@ fun SettingsScreen(onOpenCategories: () -> Unit, onOpenRecurring: () -> Unit) {
 
         SettingRow(label = "Gestione categorie", onClick = onOpenCategories)
         SettingRow(label = "Spese ricorrenti", onClick = onOpenRecurring)
+        SettingRow(
+            label = "Budget mensile",
+            subtitle = if (budgetCents > 0L) "Attuale: ${Money.format(budgetCents)}" else "Non impostato",
+            onClick = { budgetDialog = true }
+        )
 
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
         SectionLabel("Backup")
@@ -106,6 +131,11 @@ fun SettingsScreen(onOpenCategories: () -> Unit, onOpenRecurring: () -> Unit) {
             label = "Esporta dati (JSON)",
             subtitle = "Salva un backup di tutti i dati",
             onClick = { exportLauncher.launch("spese-backup.json") }
+        )
+        SettingRow(
+            label = "Esporta spese (CSV)",
+            subtitle = "Foglio di calcolo delle spese",
+            onClick = { csvLauncher.launch("spese.csv") }
         )
         SettingRow(
             label = "Importa backup",
@@ -137,7 +167,43 @@ fun SettingsScreen(onOpenCategories: () -> Unit, onOpenRecurring: () -> Unit) {
             dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Annulla") } }
         )
     }
+
+    if (budgetDialog) {
+        var input by remember { mutableStateOf(if (budgetCents > 0L) centsToInput(budgetCents) else "") }
+        AlertDialog(
+            onDismissRequest = { budgetDialog = false },
+            title = { Text("Budget mensile") },
+            text = {
+                Column {
+                    Text(
+                        "Limite di spesa per il mese (vuoto o 0 = nessun budget).",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = input,
+                        onValueChange = { input = it },
+                        label = { Text("Importo (€)") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val cents = if (input.isBlank()) 0L else (Money.parseToCents(input) ?: 0L)
+                    vm.setBudget(cents.coerceAtLeast(0L))
+                    budgetDialog = false
+                }) { Text("Salva") }
+            },
+            dismissButton = { TextButton(onClick = { budgetDialog = false }) { Text("Annulla") } }
+        )
+    }
 }
+
+private fun centsToInput(cents: Long): String =
+    "%d,%02d".format(cents / 100, (cents % 100).toInt())
 
 private fun toast(context: Context, msg: String) =
     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()

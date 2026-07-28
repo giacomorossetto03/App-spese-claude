@@ -61,7 +61,7 @@ fun DashboardScreen(onOpenExpense: (Long) -> Unit = {}) {
     val container = appContainer()
     val vm: DashboardViewModel = viewModel(
         factory = viewModelFactory {
-            DashboardViewModel(container.dashboardRepository, container.categoryRepository)
+            DashboardViewModel(container.dashboardRepository, container.categoryRepository, container.settings)
         }
     )
     val s by vm.uiState.collectAsStateWithLifecycle()
@@ -73,6 +73,7 @@ fun DashboardScreen(onOpenExpense: (Long) -> Unit = {}) {
     ) {
         MonthBar(label = s.monthLabel, onPrev = vm::prevMonth, onNext = vm::nextMonth)
         SummaryGrid(state = s)
+        BudgetSection(spentCents = s.totalCents, budgetCents = s.budgetCents)
         TrendSection(trend = s.trend)
         CategoryBreakdown(shares = s.categories, totalCents = s.totalCents)
         RecentExpenses(rows = s.recent, onOpenExpense = onOpenExpense)
@@ -171,6 +172,37 @@ private fun SummaryCard(
 @Composable
 private fun ColorDot(color: Color, modifier: Modifier = Modifier) {
     Box(modifier.size(10.dp).clip(CircleShape).background(color))
+}
+
+@Composable
+private fun BudgetSection(spentCents: Long, budgetCents: Long) {
+    if (budgetCents <= 0L) return
+    val fraction = (spentCents.toFloat() / budgetCents.toFloat()).coerceIn(0f, 1f)
+    val over = spentCents > budgetCents
+    SectionTitle("Budget del mese")
+    Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Column(Modifier.padding(16.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    "${Money.format(spentCents)} di ${Money.format(budgetCents)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    if (over) "sforato di ${Money.format(spentCents - budgetCents)}"
+                    else "rimane ${Money.format(budgetCents - spentCents)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (over) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            LinearProgressIndicator(
+                progress = { fraction },
+                color = if (over) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            )
+        }
+    }
 }
 
 @Composable

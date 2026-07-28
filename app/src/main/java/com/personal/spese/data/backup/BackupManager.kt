@@ -3,10 +3,13 @@ package com.personal.spese.data.backup
 import androidx.room.withTransaction
 import com.personal.spese.core.backup.BackupData
 import com.personal.spese.core.db.AppDatabase
+import com.personal.spese.core.util.Dates
 import com.personal.spese.data.repository.DefaultCategories
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * Milestone 10: backup/ripristino/reset. JSON via kotlinx.serialization.
@@ -26,6 +29,32 @@ class BackupManager(private val db: AppDatabase) {
         )
         return json.encodeToString(data)
     }
+
+    /** Esporta le spese in CSV (delimitatore ';' per compatibilità Excel IT). */
+    suspend fun exportExpensesCsv(): String {
+        val names = db.categoryDao().getAll().associate { it.id to it.name }
+        val expenses = db.expenseDao().getAll().sortedByDescending { it.date }
+        val fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.ITALY)
+        val sb = StringBuilder()
+        sb.append("Data;Categoria;Importo;Nota;Metodo;Tipo\n")
+        expenses.forEach { e ->
+            val row = listOf(
+                Dates.fromEpochDay(e.date).format(fmt),
+                names[e.categoryId] ?: "",
+                "%.2f".format(Locale.ITALY, e.amountCents / 100.0),
+                e.note ?: "",
+                e.paymentMethod ?: "",
+                if (e.type == "RECURRING_INSTANCE") "Ricorrente" else "Singola"
+            )
+            sb.append(row.joinToString(";") { csvEscape(it) }).append("\n")
+        }
+        return sb.toString()
+    }
+
+    private fun csvEscape(s: String): String =
+        if (s.contains(';') || s.contains('"') || s.contains('\n')) {
+            "\"" + s.replace("\"", "\"\"") + "\""
+        } else s
 
     suspend fun importJson(text: String) {
         val data = json.decodeFromString<BackupData>(text)

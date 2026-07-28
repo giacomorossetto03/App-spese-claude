@@ -31,6 +31,7 @@ data class DashboardUiState(
     val movementCount: Int = 0,
     val openInstallments: Int = 0,
     val installmentsResidualCents: Long = 0L,
+    val budgetCents: Long = 0L,
     val categories: List<CategoryShare> = emptyList(),
     val trend: List<MonthTotal> = emptyList(),
     val recent: List<RecentExpenseRow> = emptyList()
