@@ -30,32 +30,36 @@ class RecurringGenerator(
         expenseDao.updateRecurringInstances(ruleId, categoryId, amountCents, title)
     }
 
-    suspend fun generateUpTo(today: LocalDate = Dates.today()) {
-        val currentYm = YearMonth.from(today)
-        val currentPeriod = Dates.period(currentYm)
+    /**
+     * Materializza le istanze dal mese di inizio fino a [monthsAhead] mesi nel futuro, così anche
+     * le **previsioni** (mesi futuri) includono le ricorrenti. Confini a granularità **mese**:
+     * il mese d'inizio conta anche se `dayOfMonth` precede il giorno della data d'inizio
+     * (bug storico: prima veniva saltato). Idempotente via [ExpenseDao.findRecurringInstance].
+     */
+    suspend fun generateUpTo(today: LocalDate = Dates.today(), monthsAhead: Int = 12) {
+        val horizon = YearMonth.from(today).plusMonths(monthsAhead.toLong())
+        val horizonPeriod = Dates.period(horizon)
 
-        for (rule in recurringDao.toGenerate(currentPeriod)) {
-            val start = Dates.fromEpochDay(rule.startDate)
-            val end = rule.endDate?.let { Dates.fromEpochDay(it) }
+        for (rule in recurringDao.toGenerate(horizonPeriod)) {
+            val startMonth = YearMonth.from(Dates.fromEpochDay(rule.startDate))
+            val endMonth = rule.endDate?.let { YearMonth.from(Dates.fromEpochDay(it)) }
 
             // Primo mese da valutare: mese di inizio, oppure il mese dopo l'ultimo generato.
-            var period = YearMonth.from(start)
+            var period = startMonth
             rule.lastGeneratedPeriod?.let { last ->
                 val nextAfterLast = Dates.fromPeriod(last).plusMonths(1)
                 if (nextAfterLast.isAfter(period)) period = nextAfterLast
             }
 
             var lastProcessed: Int? = rule.lastGeneratedPeriod
-            while (!period.isAfter(currentYm)) {
-                val day = minOf(rule.dayOfMonth, period.lengthOfMonth())
-                val instanceDate = period.atDay(day)
-                val withinBounds = !instanceDate.isBefore(start) &&
-                    (end == null || !instanceDate.isAfter(end))
-
+            while (!period.isAfter(horizon)) {
+                // period >= startMonth per costruzione; basta il confine di fine (mese).
+                val withinBounds = endMonth == null || !period.isAfter(endMonth)
                 if (withinBounds) {
+                    val day = minOf(rule.dayOfMonth, period.lengthOfMonth())
+                    val instanceDate = period.atDay(day)
                     val (monthStart, monthEnd) = Dates.monthBounds(period)
-                    val existing = expenseDao.findRecurringInstance(rule.id, monthStart, monthEnd)
-                    if (existing == null) {
+                    if (expenseDao.findRecurringInstance(rule.id, monthStart, monthEnd) == null) {
                         expenseDao.upsert(
                             ExpenseEntity(
                                 amountCents = rule.amountCents,
@@ -78,5 +82,10 @@ class RecurringGenerator(
                 recurringDao.updateLastGenerated(rule.id, lastProcessed)
             }
         }
+    }
+
+    /** Rimuove le occorrenze **future** (da [from] incluso) di una regola; mantiene lo storico passato. */
+    suspend fun removeFutureInstances(ruleId: Long, from: LocalDate = Dates.today()) {
+        expenseDao.deleteFutureRecurringInstances(ruleId, Dates.toEpochDay(from))
     }
 }

@@ -70,9 +70,9 @@ class DashboardRepository(
             installmentEntryDao.residualTotal()
         ) { open, residual -> InstallmentSummary(open, residual) }
 
-    /** Ultime spese inserite (solo `expense`), per l'anteprima in dashboard. */
+    /** Ultime spese inserite (solo `expense`, escluse le previsioni future), per l'anteprima in dashboard. */
     fun recentExpenses(limit: Int = 5): Flow<List<Expense>> =
-        expenseDao.observeRecent(limit).map { list -> list.map { it.toDomain() } }
+        expenseDao.observeRecent(Dates.today().toEpochDay(), limit).map { list -> list.map { it.toDomain() } }
 
     /** Andamento degli ultimi [months] mesi fino a [ym] incluso: spese + rate dovute per mese. */
     fun monthlyTrend(ym: YearMonth, months: Int): Flow<List<MonthTotal>> {

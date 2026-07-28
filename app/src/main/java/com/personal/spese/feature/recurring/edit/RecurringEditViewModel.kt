@@ -85,6 +85,8 @@ class RecurringEditViewModel(
         }
 
         viewModelScope.launch {
+            // In modifica azzeriamo il cursore: così `generateUpTo` ricostruisce le previsioni future
+            // con i nuovi valori (range/giorno/importo) e ricopre eventuali mesi passati mancanti.
             recurring.upsert(
                 RecurringExpense(
                     id = if (s.isEdit) recurringId else 0L,
@@ -95,15 +97,17 @@ class RecurringEditViewModel(
                     startDate = s.startDate,
                     endDate = if (s.hasEnd) s.endDate else null,
                     isActive = s.isActive,
-                    lastGeneratedPeriod = lastGeneratedPeriod
+                    lastGeneratedPeriod = if (s.isEdit) null else lastGeneratedPeriod
                 )
             )
-            // In modifica: allinea le istanze già create ai nuovi valori (categoria/importo/titolo).
             if (s.isEdit) {
+                // Allinea le istanze passate ai nuovi valori e rimuove le previsioni future (verranno
+                // rigenerate secondo la regola aggiornata, rispettando l'eventuale nuova data di fine).
                 generator.syncExistingInstances(recurringId, s.categoryId!!, cents, s.title.trim())
+                generator.removeFutureInstances(recurringId)
             }
-            // Materializza subito eventuali istanze dovute.
-            generator.generateUpTo()
+            // Materializza subito le istanze dovute + previsioni (idempotente).
+            if (s.isActive) generator.generateUpTo()
             _state.update { it.copy(saved = true) }
         }
     }

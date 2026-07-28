@@ -28,8 +28,13 @@ interface ExpenseDao {
     )
     fun sumByCategoryInMonth(start: Long, end: Long): Flow<List<CategorySum>>
 
-    @Query("SELECT * FROM expense ORDER BY date DESC, id DESC LIMIT :limit")
-    fun observeRecent(limit: Int): Flow<List<ExpenseEntity>>
+    /**
+     * Ultime spese fino a [maxDate] incluso: esclude le istanze ricorrenti **future** ora
+     * materializzate in anticipo (fino a 12 mesi), che altrimenti riempirebbero l'anteprima
+     * "Ultime spese" con previsioni invece che con movimenti reali.
+     */
+    @Query("SELECT * FROM expense WHERE date <= :maxDate ORDER BY date DESC, id DESC LIMIT :limit")
+    fun observeRecent(maxDate: Long, limit: Int): Flow<List<ExpenseEntity>>
 
     @Query(
         "SELECT CAST(strftime('%Y%m', date * 86400, 'unixepoch') AS INTEGER) AS period, " +
@@ -62,6 +67,16 @@ interface ExpenseDao {
             "WHERE recurringId = :recurringId AND type = 'RECURRING_INSTANCE'"
     )
     suspend fun updateRecurringInstances(recurringId: Long, categoryId: Long, amountCents: Long, note: String?)
+
+    /**
+     * Rimuove le istanze ricorrenti **future** (da [fromDate] incluso) di una regola, mantenendo
+     * lo storico passato. Serve a disattivare/eliminare una ricorrente senza lasciare previsioni orfane.
+     */
+    @Query(
+        "DELETE FROM expense WHERE recurringId = :recurringId " +
+            "AND type = 'RECURRING_INSTANCE' AND date >= :fromDate"
+    )
+    suspend fun deleteFutureRecurringInstances(recurringId: Long, fromDate: Long)
 
     @Upsert
     suspend fun upsert(expense: ExpenseEntity): Long

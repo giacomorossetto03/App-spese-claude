@@ -42,10 +42,20 @@ class RecurringViewModel(
 
     fun setActive(id: Long, active: Boolean) = viewModelScope.launch {
         val rule = rules.value.firstOrNull { it.id == id } ?: return@launch
-        recurring.upsert(rule.copy(isActive = active))
-        // Riattivazione: materializza subito i mesi mancanti.
-        if (active) generator.generateUpTo()
+        if (active) {
+            // Riattivazione: azzera il cursore e materializza subito i mesi mancanti (anche futuri).
+            recurring.upsert(rule.copy(isActive = true, lastGeneratedPeriod = null))
+            generator.generateUpTo()
+        } else {
+            // Disattivazione: rimuove le previsioni future, mantiene lo storico.
+            recurring.upsert(rule.copy(isActive = false))
+            generator.removeFutureInstances(id)
+        }
     }
 
-    fun delete(id: Long) = viewModelScope.launch { recurring.delete(id) }
+    fun delete(id: Long) = viewModelScope.launch {
+        // Elimina prima le istanze future materializzate, poi la regola (lo storico passato resta).
+        generator.removeFutureInstances(id)
+        recurring.delete(id)
+    }
 }
