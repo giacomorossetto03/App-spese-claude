@@ -9,7 +9,7 @@ proseguire le milestone verso l'MVP potendo ora **compilare e testare in locale*
 possibile nel sandbox chat dove il progetto è nato).
 
 ## Current Progress
-Milestone **1–10 complete** (11 rifinitura UX in corso) e presenti nel repo:
+Milestone **1–11 complete — roadmap MVP+ finita**. Presenti nel repo:
 - **M1 Setup** — Gradle (version catalog), tema Material 3 chiaro/scuro, bottom nav 4 voci + FAB, scaffold navigazione.
 - **M2 Model + Room** — 6 entità, 5 DAO con query aggregate mese/rate/ricorrenti già scritte.
 - **M3 Categorie** — CRUD, seed 10 categorie default al primo avvio, archiviazione; selettore tema persistito su DataStore.
@@ -86,12 +86,19 @@ link diretto al file `.apk`). ~60 file Kotlin.
 - **Fix grafico insets** — `AppRoot` usa `consumeWindowInsets(padding)` così le sotto-schermate con `TopAppBar`
   non raddoppiano il padding della status bar.
 
-## Next Steps — Milestone 11: Rifinitura UX (facoltativa)
-MVP+ completo. Possibili rifiniture: filtro "Ricorrenti" nella lista spese; budget mensile (`MonthlyBudget` già in
-schema, post-MVP) con barra progresso in dashboard; export CSV oltre al JSON; empty-state più curati; icona app.
-Ottimizzazione ulteriore: abilitare **R8/minify** nel release (serialization è ora usata → aggiungere keep-rule
-per `@Serializable` prima di attivarlo). Ricordare: `fallbackToDestructiveMigration` → non toccare lo schema
-senza necessità (perdita dati sul device).
+- **M11 Rifinitura UX** — filtro "Ricorrenti" + scroll orizzontale dei filtri (lista spese); **budget mensile**
+  (DataStore, non l'entità `MonthlyBudget`) impostabile da Impostazioni con dialog, e barra progresso in dashboard
+  (rossa se sforato); **export CSV** delle spese (`BackupManager.exportExpensesCsv`, SAF `text/csv`, delimitatore
+  `;`); **icona app** ridisegnata (bar-chart arrotondato) con layer `monochrome` per icone a tema.
+- **R8/minify ATTIVO** nel release (`isMinifyEnabled = true`). Keep-rule in `proguard-rules.pro` per
+  kotlinx.serialization ed enum (`valueOf`); Room/Compose/Glance/DataStore portano le proprie consumer-rules.
+  ⚠️ La build passa, ma R8 non è testabile qui a runtime: se qualcosa crasha sul device, per tornare indietro
+  basta `isMinifyEnabled = false`.
+
+## Stato
+Roadmap 1–11 completa (MVP+). Idee future non in roadmap: budget per-categoria (entità `MonthlyBudget` già in
+schema), ricerca/filtri avanzati, grafici a 12 mesi, notifiche scadenze rate. Ricordare:
+`fallbackToDestructiveMigration` → quando lo schema si stabilizza passare a **migrazioni vere** (invariante 11).
 
 ## Come ottenere l'APK
 - **Release (consigliato)**: GitHub → *Releases* → `latest` → scarica `app-release.apk` (release ottimizzata,
