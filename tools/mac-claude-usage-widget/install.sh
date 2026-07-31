@@ -101,10 +101,14 @@ else
   echo "    [--] widget da scrivania non installato"
 fi
 
-if pgrep -x "Übersicht" > /dev/null 2>&1 || pgrep -f "bersicht.app" > /dev/null 2>&1; then
+# Si controlla il processo reale dell'app, non un `open` di passaggio.
+if pgrep -f "bersicht.app/Contents/MacOS" > /dev/null 2>&1; then
   echo "    [ok] Übersicht è in esecuzione"
+  echo "         (è un'app da barra dei menu: nessuna finestra, nessuna icona nel Dock)"
 elif [ -n "$UB_APP" ]; then
-  echo "    [KO] Übersicht non risulta in esecuzione: aprilo dalle Applicazioni"
+  echo "    [KO] Übersicht non risulta in esecuzione"
+  echo "         Aprilo dalle Applicazioni. Se macOS blocca l'avvio:"
+  echo "         Impostazioni di Sistema > Privacy e Sicurezza > \"Apri comunque\""
 fi
 
 echo

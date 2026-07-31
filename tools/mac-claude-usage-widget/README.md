@@ -104,6 +104,28 @@ stale=0
 In caso di problema stampa `status=error` e `error=<messaggio>`, sempre con
 uscita 0, così il widget mostra il messaggio invece di una casella vuota.
 
+## Diagnostica
+
+```bash
+~/.local/bin/claude-usage.sh --debug
+```
+
+Ignora la cache, fa una chiamata vera e stampa da dove arriva il token, quando
+scade, il codice HTTP e la risposta del server. Del token mostra solo i primi
+14 caratteri.
+
+```
+--- diagnostica -------------------------------------------
+sorgente token : portachiavi macOS
+token          : sk-ant-oat01-A… (108 caratteri)
+scadenza token : fra 8h 00m
+user-agent     : claude-cli/2.1.220 (external, cli)
+HTTP           : 200
+risposta       :
+  {"five_hour":{"utilization":33.0, ...
+-----------------------------------------------------------
+```
+
 ## Se qualcosa non funziona
 
 | Sintomo | Causa | Rimedio |

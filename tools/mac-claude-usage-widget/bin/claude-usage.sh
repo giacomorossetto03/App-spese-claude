@@ -15,6 +15,12 @@ set -uo pipefail
 
 ENDPOINT="https://api.anthropic.com/api/oauth/usage"
 TTL="${CLAUDE_USAGE_TTL:-300}"
+# L'endpoint fa parte del client Claude Code e rifiuta gli User-Agent che non
+# riconosce: ci si presenta come il client ufficiale (stesso account, stessi dati).
+UA="${CLAUDE_USAGE_UA:-claude-cli/2.1.220 (external, cli)}"
+
+DEBUG=0
+[ "${1:-}" = "--debug" ] && { DEBUG=1; TTL=0; }   # --debug forza sempre una chiamata vera
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/claude-usage-widget"
 CACHE_FILE="$CACHE_DIR/usage.json"
 
@@ -66,25 +72,35 @@ fail() {
 
 # --- token ------------------------------------------------------------------
 
+TOKEN=""           # token letto (globale: non usare in $(...), si perderebbe)
+TOKEN_SRC=""       # da dove arriva il token
+TOKEN_EXP=""       # scadenza in epoch secondi, se nota
+
 read_token() {
   if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
-    printf '%s' "$CLAUDE_CODE_OAUTH_TOKEN"
+    TOKEN_SRC="variabile CLAUDE_CODE_OAUTH_TOKEN"
+    TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"
     return 0
   fi
 
-  local cred="$CACHE_DIR/cred.json" token=""
+  local cred="$CACHE_DIR/cred.json" exp_ms=""
   if security find-generic-password -s "Claude Code-credentials" -w > "$cred" 2>/dev/null; then
-    :
+    TOKEN_SRC="portachiavi macOS"
   elif [ -f "$HOME/.claude/.credentials.json" ]; then
     cp "$HOME/.claude/.credentials.json" "$cred" 2>/dev/null
+    TOKEN_SRC="~/.claude/.credentials.json"
   fi
   [ -s "$cred" ] || { rm -f "$cred"; return 1; }
   chmod 600 "$cred"
 
-  token=$(json_get "$cred" "claudeAiOauth.accessToken")
+  TOKEN=$(json_get "$cred" "claudeAiOauth.accessToken")
+  exp_ms=$(json_get "$cred" "claudeAiOauth.expiresAt")
+  case "$exp_ms" in
+    ''|*[!0-9]*) TOKEN_EXP="" ;;
+    *) TOKEN_EXP=$(( exp_ms / 1000 )) ;;
+  esac
   rm -f "$cred"
-  [ -n "$token" ] || return 1
-  printf '%s' "$token"
+  [ -n "$TOKEN" ] || return 1
 }
 
 # --- fetch con cache --------------------------------------------------------
@@ -99,27 +115,53 @@ fetch_err=""
 age=$(cache_age)
 
 if [ "$age" -ge "$TTL" ]; then
-  token=$(read_token)
-  if [ -z "${token:-}" ]; then
+  read_token
+  if [ -z "$TOKEN" ]; then
     fail "Nessun token Claude trovato. Esegui \`claude\` e fai login."
   fi
 
   tmp=$(mktemp "$CACHE_DIR/fetch.XXXXXX")
   code=$(curl -sS -m 15 -o "$tmp" -w '%{http_code}' \
-      -H "Authorization: Bearer $token" \
+      -H "Authorization: Bearer $TOKEN" \
       -H "anthropic-beta: oauth-2025-04-20" \
-      -H "User-Agent: claude-usage-widget/1.0" \
+      -H "anthropic-version: 2023-06-01" \
+      -H "User-Agent: $UA" \
       -H "Content-Type: application/json" \
       "$ENDPOINT" 2>/dev/null)
+
+  if [ "$DEBUG" = "1" ]; then
+    echo "--- diagnostica -------------------------------------------"
+    echo "sorgente token : ${TOKEN_SRC:-sconosciuta}"
+    echo "token          : ${TOKEN:0:14}… (${#TOKEN} caratteri)"
+    if [ -n "$TOKEN_EXP" ]; then
+      left=$(( TOKEN_EXP - $(date +%s) ))
+      if [ "$left" -gt 0 ]; then
+        echo "scadenza token : fra $(human_left "$left")"
+      else
+        echo "scadenza token : SCADUTO da $(human_left $(( -left )))"
+      fi
+    else
+      echo "scadenza token : non disponibile"
+    fi
+    echo "user-agent     : $UA"
+    echo "HTTP           : $code"
+    echo "risposta       :"
+    sed 's/^/  /' "$tmp" 2>/dev/null | head -20
+    echo "-----------------------------------------------------------"
+  fi
 
   case "$code" in
     200)
       mv "$tmp" "$CACHE_FILE"
       age=0
       ;;
-    401|403)
+    401)
       rm -f "$tmp"
-      fetch_err="Token scaduto: apri Claude Code per rinnovarlo."
+      fetch_err="Token scaduto: apri Claude Code sul Mac per rinnovarlo."
+      ;;
+    403)
+      rm -f "$tmp"
+      fetch_err="Accesso negato all'endpoint usage (403)."
       ;;
     429)
       rm -f "$tmp"
