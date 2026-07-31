@@ -112,6 +112,7 @@ uscita 0, così il widget mostra il messaggio invece di una casella vuota.
 | `Token scaduto` | access token OAuth scaduto | apri Claude Code: rinnova il token nel portachiavi, il widget lo riprende da solo |
 | `Rate limit sull'endpoint usage` | troppe richieste | normale, si risolve da sé; eventualmente alza `CLAUDE_USAGE_TTL` |
 | Widget vuoto in Übersicht | script non trovato | verifica che `~/.local/bin/claude-usage.sh` esista e sia eseguibile |
+| Il widget non compare per niente | Übersicht non in esecuzione, o widget non caricato | aprilo dalle Applicazioni, poi menu nella barra → *Refresh All Widgets* |
 | Il permesso portachiavi torna a ogni refresh | scelto "Consenti" invece di "Consenti sempre" | in *Accesso Portachiavi* → `Claude Code-credentials` → *Controllo accessi*, aggiungi l'app |
 
 ## File
