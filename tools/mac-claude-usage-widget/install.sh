@@ -16,6 +16,10 @@ echo "==> Installo lo script di raccolta dati in $BIN_DIR"
 mkdir -p "$BIN_DIR"
 cp "$SRC/bin/claude-usage.sh" "$BIN_DIR/claude-usage.sh"
 chmod +x "$BIN_DIR/claude-usage.sh"
+echo "    versione: $("$BIN_DIR/claude-usage.sh" --version)"
+
+# Un `git pull` aggiorna il repo, non questa copia: senza rilanciare l'installer
+# si continuerebbe a eseguire la versione vecchia.
 
 echo "==> Primo avvio (macOS può chiedere l'accesso al portachiavi: scegli \"Consenti sempre\")"
 "$BIN_DIR/claude-usage.sh"

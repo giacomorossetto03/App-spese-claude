@@ -19,12 +19,17 @@ TTL="${CLAUDE_USAGE_TTL:-300}"
 # riconosce: ci si presenta come il client ufficiale (stesso account, stessi dati).
 UA="${CLAUDE_USAGE_UA:-claude-cli/2.1.220 (external, cli)}"
 
-DEBUG=0
-[ "${1:-}" = "--debug" ] && { DEBUG=1; TTL=0; }   # --debug forza sempre una chiamata vera
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/claude-usage-widget"
 CACHE_FILE="$CACHE_DIR/usage.json"
 
 mkdir -p "$CACHE_DIR"
+
+DEBUG=0
+case "${1:-}" in
+  --debug)  DEBUG=1 ;;                       # ignora cache e backoff, chiamata vera
+  --reset)  rm -f "$CACHE_DIR"/*; echo "Cache e backoff azzerati."; exit 0 ;;
+  --version) echo "claude-usage 1.1"; exit 0 ;;
+esac
 
 # --- helper -----------------------------------------------------------------
 
@@ -113,8 +118,24 @@ cache_age() {
 stale=0
 fetch_err=""
 age=$(cache_age)
+now=$(date +%s)
 
-if [ "$age" -ge "$TTL" ]; then
+# Il ritmo delle chiamate si regola sull'ultimo TENTATIVO, non sull'ultima
+# risposta buona: altrimenti, finché non arriva un 200, non esiste nessun file
+# di cache e ogni refresh del widget (60s) rifà la richiesta — che è il modo
+# più veloce per restare permanentemente in 429 su questo endpoint.
+ATTEMPT_FILE="$CACHE_DIR/last-attempt"
+BACKOFF_FILE="$CACHE_DIR/backoff-until"
+
+attempt_age=999999
+[ -f "$ATTEMPT_FILE" ] && attempt_age=$(( now - $(stat -f %m "$ATTEMPT_FILE") ))
+
+backoff_until=0
+[ -f "$BACKOFF_FILE" ] && backoff_until=$(cat "$BACKOFF_FILE" 2>/dev/null || echo 0)
+case "$backoff_until" in ''|*[!0-9]*) backoff_until=0 ;; esac
+
+if [ "$DEBUG" = "1" ] || { [ "$age" -ge "$TTL" ] && [ "$attempt_age" -ge "$TTL" ] && [ "$now" -ge "$backoff_until" ]; }; then
+  touch "$ATTEMPT_FILE"
   read_token
   if [ -z "$TOKEN" ]; then
     fail "Nessun token Claude trovato. Esegui \`claude\` e fai login."
@@ -150,35 +171,51 @@ if [ "$age" -ge "$TTL" ]; then
     echo "-----------------------------------------------------------"
   fi
 
+  # Dopo un errore si sta fermi: riprovare subito peggiora e basta.
+  backoff=0
   case "$code" in
     200)
       mv "$tmp" "$CACHE_FILE"
       age=0
+      rm -f "$BACKOFF_FILE"
       ;;
     401)
       rm -f "$tmp"
       fetch_err="Token scaduto: apri Claude Code sul Mac per rinnovarlo."
+      backoff=600
       ;;
     403)
       rm -f "$tmp"
       fetch_err="Accesso negato all'endpoint usage (403)."
+      backoff=1800
       ;;
     429)
       rm -f "$tmp"
-      # L'endpoint applica un rate limit severo: si tiene il dato in cache.
-      fetch_err="Rate limit sull'endpoint usage."
+      # Rate limit severo e documentato: si aspetta a lungo prima di riprovare.
+      fetch_err="Rate limit: nuovo tentativo fra 15 min."
+      backoff=900
       ;;
     *)
       rm -f "$tmp"
       fetch_err="Richiesta fallita (HTTP ${code:-?})."
+      backoff=300
       ;;
   esac
 
-  [ -n "$fetch_err" ] && stale=1
+  if [ "$backoff" -gt 0 ]; then
+    stale=1
+    printf '%s' "$(( now + backoff ))" > "$BACKOFF_FILE"
+  fi
 fi
 
 if [ ! -f "$CACHE_FILE" ]; then
-  fail "${fetch_err:-Nessun dato disponibile.}"
+  if [ -n "$fetch_err" ]; then
+    fail "$fetch_err"
+  elif [ "$now" -lt "$backoff_until" ]; then
+    fail "In attesa: nuovo tentativo fra $(human_left $(( backoff_until - now )))."
+  else
+    fail "Nessun dato disponibile."
+  fi
 fi
 
 # --- output -----------------------------------------------------------------

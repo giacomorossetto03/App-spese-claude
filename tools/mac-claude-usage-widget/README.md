@@ -51,6 +51,10 @@ brew install --cask swiftbar    # indicatore nella barra dei menu
 
 Se non ne hai nessuno: installali, poi rilancia `./install.sh`.
 
+> Dopo ogni `git pull` **rilancia `./install.sh`**: il pull aggiorna il repo, non
+> la copia in `~/.local/bin`. Per sapere quale versione è installata:
+> `~/.local/bin/claude-usage.sh --version`
+
 **Al primo avvio** macOS chiede l'accesso al portachiavi: scegli **"Consenti
 sempre"**, altrimenti il permesso verrà richiesto a ogni aggiornamento.
 Übersicht e SwiftBar sono processi diversi, quindi ognuno chiederà il permesso
@@ -132,7 +136,8 @@ risposta       :
 |---|---|---|
 | `Nessun token Claude trovato` | mai fatto login, o portachiavi bloccato | lancia `claude` in un terminale e fai login |
 | `Token scaduto` | access token OAuth scaduto | apri Claude Code: rinnova il token nel portachiavi, il widget lo riprende da solo |
-| `Rate limit sull'endpoint usage` | troppe richieste | normale, si risolve da sé; eventualmente alza `CLAUDE_USAGE_TTL` |
+| `Rate limit: nuovo tentativo fra 15 min` | troppe richieste | aspetta: lo script si mette in backoff da solo e non insiste |
+| `In attesa: nuovo tentativo fra …` | backoff dopo un errore | normale; per forzare subito: `claude-usage.sh --debug` |
 | Widget vuoto in Übersicht | script non trovato | verifica che `~/.local/bin/claude-usage.sh` esista e sia eseguibile |
 | Il widget non compare per niente | Übersicht non in esecuzione, o widget non caricato | aprilo dalle Applicazioni, poi menu nella barra → *Refresh All Widgets* |
 | Il permesso portachiavi torna a ogni refresh | scelto "Consenti" invece di "Consenti sempre" | in *Accesso Portachiavi* → `Claude Code-credentials` → *Controllo accessi*, aggiungi l'app |
