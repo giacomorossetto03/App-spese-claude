@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Spese</title>
+  <meta name="description" content="Tracker spese personali, 100% offline." />
+  <meta name="theme-color" content="#2e7d64" />
+
+  <!-- iOS: consente l'installazione a schermo intero (standalone) da Safari -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Spese" />
+  <link rel="apple-touch-icon" href="./icons/icon-180.png" />
+
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icons/icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="app" aria-live="polite"></div>
+
+  <!-- FAB "aggiungi spesa" (mostrato solo su Dashboard/Spese) -->
+  <button id="fab" class="fab" aria-label="Aggiungi spesa" hidden>+</button>
+
+  <!-- Barra di navigazione inferiore -->
+  <nav id="bottomnav" class="bottomnav" aria-label="Navigazione principale"></nav>
+
+  <!-- Contenitore per dialog/modali -->
+  <div id="modal-root"></div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
