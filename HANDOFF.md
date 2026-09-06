@@ -81,7 +81,24 @@ Funzionalità presenti:
   derivato dall'id (`ui/theme/CategoryColors`, nessuna colonna DB).
 - **Tema** chiaro/scuro/sistema (DataStore); **icona app** bar-chart arrotondato + layer `monochrome`.
 
-## Build / distribuzione (CRITICO — leggere prima di toccare la build)
+## PWA (versione web installabile su iOS/Android) — cartella `pwa/`
+- Reimplementazione **client-side** dell'app (vanilla JS, zero dipendenze, offline): `pwa/index.html` +
+  `styles.css` + `app.js` (tutta la logica: spese, rate con interessi, ricorrenti con previsioni,
+  dashboard con donut/andamento/budget, lista Spese con rate integrate, tema, export/import JSON, reset).
+  Denaro in **centesimi**; dati su **localStorage**; `navigator.storage.persist()` per ridurre l'eviction iOS.
+- PWA vera: `manifest.webmanifest` + `sw.js` (cache-first, offline) + `icons/` (PNG generate da `gen-icons.cjs`).
+  Tutti i path sono **relativi** → funziona anche sotto sottocartella (project Pages).
+- **Testata** con Playwright/Chromium (`pwa/test.cjs`): 0 errori console, calcoli verificati.
+- **Hosting = GitHub Pages di QUESTO repo** (scelta utente). Workflow `.github/workflows/deploy-pwa.yml`
+  pubblica **solo** `pwa/` sul branch **`gh-pages`** (via `peaceiris/actions-gh-pages`, esclude
+  `.github`/`gen-icons.cjs`/`test.cjs`/`README.md`). Il repo resta **privato**; la keystore NON è esposta.
+  `build-apk.yml` ha `paths-ignore: pwa/**` così le modifiche PWA non ricompilano l'APK.
+- **Attivazione una-tantum lato utente**: Settings → Pages → *Deploy from a branch* → `gh-pages` / `/(root)`.
+  URL: `https://giacomorossetto03.github.io/App-spese-claude/`. ⚠️ Pages su repo **privato** richiede piano **Pro**;
+  altrimenti fallback: repo pubblico dedicato (solo PWA) oppure ZIP + Netlify Drop.
+- Install: iPhone Safari → Condividi → «Aggiungi a Home»; Android Chrome → ⋮ → «Installa app».
+
+## Build / distribuzione APK (CRITICO — leggere prima di toccare la build)
 - **La build funziona SOLO via GitHub Actions**, non in locale in questo ambiente: `dl.google.com` è
   **bloccato dalla policy di egress** (403), quindi l'Android SDK non è scaricabile qui. Non aggirare il blocco.
 - CI: `.github/workflows/build-apk.yml` → `assembleRelease` → carica artifact `spese-apk` **e** pubblica la
