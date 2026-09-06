@@ -1,0 +1,34 @@
+name: Deploy PWA
+
+# Pubblica SOLO la cartella pwa/ sul branch gh-pages (GitHub Pages).
+# Il resto del repo (incluso app/release.keystore) NON viene pubblicato.
+on:
+  push:
+    branches: [ main, master, 'claude/**' ]
+    paths:
+      - 'pwa/**'
+      - '.github/workflows/deploy-pwa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-pwa
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pubblica pwa/ su gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./pwa
+          publish_branch: gh-pages
+          # Escludi i file di sviluppo dal sito pubblicato.
+          exclude_assets: '.github,gen-icons.cjs,test.cjs,README.md'
+          commit_message: 'Deploy PWA da ${{ github.sha }}'

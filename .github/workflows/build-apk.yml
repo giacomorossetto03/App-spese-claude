@@ -5,6 +5,7 @@ on:
     branches: [ main, master, 'claude/**' ]
     paths-ignore:
       - '**.md'
+      - 'pwa/**'
   workflow_dispatch:
 
 permissions:
